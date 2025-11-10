@@ -1,0 +1,18 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --gold: #f7c948;
+  --dark: #1a1a1a;
+}
+
+/* helper classes (optional) */
+.text-gold { color: var(--gold); }
+.bg-gold { background-color: var(--gold); }
+.text-dark { color: var(--dark); }
+.bg-dark { background-color: var(--dark); }
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}
