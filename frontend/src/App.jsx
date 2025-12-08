@@ -13,6 +13,8 @@ import Footer from "./components/Footer";
 import { CartProvider } from "./context/CartContext";
 
 function App() {
+  const isStaff = localStorage.getItem("is_staff") === "true";
+
   return (
     <CartProvider>
       <div className="flex flex-col min-h-screen bg-gray-50">
@@ -24,7 +26,21 @@ function App() {
             <Route path="/checkout" element={<Checkout />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/admin" element={<Admin />} />
+
+            {/* PROTECTED ADMIN ROUTE */}
+            <Route
+              path="/admin"
+              element={
+                isStaff ? (
+                  <Admin />
+                ) : (
+                  <h1 className="text-center text-2xl mt-10 text-red-600">
+                    Access Denied 🔐 (Staff Only)
+                  </h1>
+                )
+              }
+            />
+
             <Route path="/profile" element={<Profile />} />
             <Route path="/purchases" element={<Purchases />} />
             <Route path="/about" element={<About />} />

@@ -26,8 +26,11 @@ function Login() {
         return;
       }
 
+      // SAVE USER + STAFF STATUS
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("token", data.token || "");
+      localStorage.setItem("is_staff", data.user?.is_staff ? "true" : "false");
+
       alert("Login successful!");
       navigate("/profile");
     } catch (err) {
@@ -48,6 +51,7 @@ function Login() {
           className="w-full border p-2 mb-3 rounded"
           required
         />
+
         <div className="relative">
           <input
             type={show ? "text" : "password"}
@@ -57,7 +61,11 @@ function Login() {
             className="w-full border p-2 mb-3 rounded pr-12"
             required
           />
-          <button type="button" onClick={() => setShow((s) => !s)} className="absolute right-2 top-2 text-sm text-gray-600">
+          <button
+            type="button"
+            onClick={() => setShow((s) => !s)}
+            className="absolute right-2 top-2 text-sm text-gray-600"
+          >
             {show ? "Hide" : "Show"}
           </button>
         </div>
@@ -65,6 +73,7 @@ function Login() {
         <button type="submit" className="w-full bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600">
           Login
         </button>
+
         {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
       </form>
     </div>

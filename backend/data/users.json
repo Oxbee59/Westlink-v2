@@ -5,5 +5,12 @@
     "email": "agyeiosborn59@gmail.com",
     "password": "$2a$10$EZ4hYL5fs0imGVYfs2Bheuuu0faZD00w1Q5roIogp8DdWo4Qyq3mm",
     "isAdmin": false
+  },
+  {
+    "id": 1,
+    "name": "admin",
+    "email": "admin@example.com",
+    "password": "$2a$10$F2NldfQz49/HT4m4G5Qy0eVZ9BqOpxhWwzJ1q6Nxx/6EtB.Yz8e0C",
+    "isAdmin": true
   }
 ]

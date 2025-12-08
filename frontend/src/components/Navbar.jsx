@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { ShoppingCart, Menu, X } from "lucide-react";
 import logo from "../assets/westlink_logo.png";
@@ -7,8 +7,21 @@ import logo from "../assets/westlink_logo.png";
 export default function Navbar() {
   const { cartItems } = useCart();
   const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const isStaff = localStorage.getItem("is_staff") === "true";
+  const user = localStorage.getItem("user");
 
   const totalItems = cartItems.reduce((sum, item) => sum + (item.qty || 1), 0);
+
+  // LOGOUT FUNCTION
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    localStorage.removeItem("token");
+    localStorage.removeItem("is_staff");
+    setMenuOpen(false);
+    navigate("/login");
+  };
 
   return (
     <>
@@ -30,8 +43,21 @@ export default function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
-            <Link to="/login" className="hover:text-yellow-400">Login</Link>
-            <Link to="/register" className="hover:text-yellow-400">Register</Link>
+            {!user && (
+              <>
+                <Link to="/login" className="hover:text-yellow-400">Login</Link>
+                <Link to="/register" className="hover:text-yellow-400">Register</Link>
+              </>
+            )}
+
+            {user && (
+              <>
+                <Link to="/profile" className="hover:text-yellow-400">Profile</Link>
+                <button onClick={handleLogout} className="hover:text-yellow-400">
+                  Logout
+                </button>
+              </>
+            )}
 
             <Link to="/cart" className="relative flex items-center hover:text-yellow-400">
               <ShoppingCart className="w-6 h-6" />
@@ -44,7 +70,7 @@ export default function Navbar() {
             </Link>
           </div>
 
-          {/* mobile right icons */}
+          {/* MOBILE RIGHT ICONS */}
           <div className="md:hidden flex items-center space-x-3">
             <Link to="/cart" className="relative flex items-center hover:text-yellow-400">
               <ShoppingCart className="w-6 h-6" />
@@ -58,11 +84,17 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* overlay */}
-      {menuOpen && <div className="fixed inset-0 bg-black bg-opacity-40 z-40" onClick={() => setMenuOpen(false)} />}
+      {/* OVERLAY */}
+      {menuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 z-40" onClick={() => setMenuOpen(false)} />
+      )}
 
-      {/* sidebar */}
-      <div className={`fixed top-0 left-0 h-full w-64 bg-dark text-gold shadow-lg transform transition-transform duration-300 z-50 ${menuOpen ? "translate-x-0" : "-translate-x-full"}`}>
+      {/* SIDEBAR */}
+      <div
+        className={`fixed top-0 left-0 h-full w-64 bg-dark text-gold shadow-lg transform transition-transform duration-300 z-50 ${
+          menuOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         <div className="flex justify-between items-center px-4 py-3 border-b border-gold">
           <h2 className="text-lg font-bold">Menu</h2>
           <button onClick={() => setMenuOpen(false)} className="text-gold">
@@ -71,13 +103,51 @@ export default function Navbar() {
         </div>
 
         <div className="flex flex-col px-6 py-6 space-y-4">
-          <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">👤 Profile</Link>
-          <Link to="/purchases" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">🛍 Purchases</Link>
-          <Link to="/about" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">ℹ️ About</Link>
-          <div className="pt-4 border-t border-gold">
-            <Link to="/login" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">Login</Link>
-            <Link to="/register" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">Register</Link>
-          </div>
+          <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">
+            👤 Profile
+          </Link>
+
+          <Link to="/purchases" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">
+            🛍 Purchases
+          </Link>
+
+          <Link to="/about" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">
+            ℹ️ About
+          </Link>
+
+          {/* ADMIN ONLY */}
+          {isStaff && (
+            <Link
+              to="/admin"
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-yellow-400 font-bold"
+            >
+              🔐 Admin Panel
+            </Link>
+          )}
+
+          {/* Divider */}
+          <div className="pt-4 border-t border-gold"></div>
+
+          {!user && (
+            <>
+              <Link to="/login" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">
+                Login
+              </Link>
+              <Link to="/register" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">
+                Register
+              </Link>
+            </>
+          )}
+
+          {user && (
+            <button
+              onClick={handleLogout}
+              className="text-left hover:text-yellow-400"
+            >
+              Logout
+            </button>
+          )}
         </div>
       </div>
     </>
