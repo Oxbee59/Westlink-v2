@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Login() {
@@ -6,13 +6,27 @@ function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [show, setShow] = useState(false);
+  const [welcomeMsg, setWelcomeMsg] = useState("");
   const navigate = useNavigate();
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
+  // Detect returning users
+  useEffect(() => {
+    const existingUser = localStorage.getItem("user");
+
+    if (existingUser) {
+      const userObj = JSON.parse(existingUser);
+      setWelcomeMsg(`Welcome back, ${userObj.name}! Continue your journey with Westlink.`);
+    } else {
+      setWelcomeMsg("Start your journey with Westlink — explore a wide range of quality collections.");
+    }
+  }, []);
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+
     try {
       const res = await fetch(`${API}/api/login`, {
         method: "POST",
@@ -41,7 +55,13 @@ function Login() {
 
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4">
-      <h2 className="text-2xl font-bold mb-4">Login</h2>
+      <h2 className="text-2xl font-bold mb-2">Login</h2>
+
+      {/* Customer Interaction Message */}
+      <p className="text-gray-700 text-center max-w-md mb-4">
+        {welcomeMsg}
+      </p>
+
       <form onSubmit={handleLogin} className="w-full max-w-md bg-white p-6 rounded shadow">
         <input
           type="email"
@@ -70,7 +90,10 @@ function Login() {
           </button>
         </div>
 
-        <button type="submit" className="w-full bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600">
+        <button
+          type="submit"
+          className="w-full bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600"
+        >
           Login
         </button>
 

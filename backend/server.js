@@ -102,17 +102,37 @@ app.post("/api/login", (req, res) => {
   try {
     const { email, password } = req.body;
     const users = readData(usersFile);
+
     const user = users.find((u) => u.email === email);
+
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
-    const token = jwt.sign({ id: user.id, isAdmin: user.isAdmin }, SECRET, { expiresIn: "2h" });
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin } });
+
+    const token = jwt.sign(
+      { id: user.id, isAdmin: user.isAdmin },
+      SECRET,
+      { expiresIn: "2h" }
+    );
+
+    // FIX is here 👇
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        isAdmin: user.isAdmin,
+        is_staff: user.isAdmin   // <-- ADD THIS LINE
+      }
+    });
+
   } catch (err) {
     console.error("Login error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 // get profile
 app.get("/api/profile/:id", (req, res) => {

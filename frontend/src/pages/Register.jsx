@@ -6,6 +6,7 @@ function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
 
@@ -14,6 +15,8 @@ function Register() {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
+
     try {
       const res = await fetch(`${API}/api/register`, {
         method: "POST",
@@ -26,8 +29,9 @@ function Register() {
         setError(data.message || "Registration failed");
         return;
       }
-      alert("Registration successful!");
-      navigate("/login");
+
+      setSuccess("Registration successful! Redirecting...");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
       console.error(err);
       setError("Something went wrong.");
@@ -37,7 +41,11 @@ function Register() {
   return (
     <div className="flex flex-col items-center justify-center py-10 px-4">
       <h2 className="text-2xl font-bold mb-4">Register</h2>
-      <form onSubmit={handleRegister} className="w-full max-w-md bg-white p-6 rounded shadow">
+
+      <form
+        onSubmit={handleRegister}
+        className="w-full max-w-md bg-white p-6 rounded shadow"
+      >
         <input
           type="text"
           placeholder="Full Name"
@@ -46,6 +54,7 @@ function Register() {
           className="w-full border p-2 mb-3 rounded"
           required
         />
+
         <input
           type="email"
           placeholder="Email"
@@ -54,6 +63,7 @@ function Register() {
           className="w-full border p-2 mb-3 rounded"
           required
         />
+
         <div className="relative">
           <input
             type={show ? "text" : "password"}
@@ -72,10 +82,15 @@ function Register() {
           </button>
         </div>
 
-        <button type="submit" className="w-full bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600">
+        <button
+          type="submit"
+          className="w-full bg-yellow-500 text-black py-2 rounded hover:bg-yellow-600"
+        >
           Register
         </button>
+
         {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+        {success && <p className="text-green-600 text-sm mt-3">{success}</p>}
       </form>
     </div>
   );
