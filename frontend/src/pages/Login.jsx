@@ -35,6 +35,7 @@ function Login() {
       });
 
       const data = await res.json();
+
       if (!res.ok) {
         setError(data.message || "Login failed");
         return;
@@ -43,7 +44,9 @@ function Login() {
       // SAVE USER + STAFF STATUS
       localStorage.setItem("user", JSON.stringify(data.user));
       localStorage.setItem("token", data.token || "");
-      localStorage.setItem("is_staff", data.user?.is_staff ? "true" : "false");
+
+      // FIX: map backend isAdmin → frontend is_staff
+      localStorage.setItem("is_staff", data.user.isAdmin ? "true" : "false");
 
       alert("Login successful!");
       navigate("/profile");
