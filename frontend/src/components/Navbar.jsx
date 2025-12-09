@@ -126,6 +126,15 @@ export default function Navbar() {
             </Link>
           )}
 
+          {/* NEW: CONTACT STAFF LINK */}
+          <Link
+            to="/contact-staff"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-yellow-400 font-semibold"
+          >
+            📞 Contact Staff
+          </Link>
+
           {/* Divider */}
           <div className="pt-4 border-t border-gold"></div>
 

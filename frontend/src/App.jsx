@@ -8,6 +8,7 @@ import Profile from "./pages/Profile";
 import Purchases from "./pages/Purchases";
 import About from "./pages/About";
 import Admin from "./pages/Admin";
+import ContactStaff from "./pages/ContactStaff"; // <-- import ContactStaff
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { CartProvider } from "./context/CartContext";
@@ -44,6 +45,9 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/purchases" element={<Purchases />} />
             <Route path="/about" element={<About />} />
+
+            {/* CONTACT STAFF PAGE */}
+            <Route path="/contact-staff" element={<ContactStaff />} /> {/* <-- new route */}
           </Routes>
         </main>
         <Footer />

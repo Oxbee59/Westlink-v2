@@ -45,9 +45,10 @@ const usersFile = path.join(dataDir, "users.json");
 const productsFile = path.join(dataDir, "products.json");
 const cartFile = path.join(dataDir, "carts.json");
 const aboutFile = path.join(dataDir, "about.json");
+const ordersFile = path.join(dataDir, "orders.json"); // <-- new orders file
 
 // ensure json files exist
-for (const f of [usersFile, productsFile, cartFile, aboutFile]) {
+for (const f of [usersFile, productsFile, cartFile, aboutFile, ordersFile]) {
   if (!fs.existsSync(f)) fs.writeFileSync(f, "[]", "utf-8");
 }
 
@@ -115,7 +116,7 @@ app.post("/api/login", (req, res) => {
       { expiresIn: "2h" }
     );
 
-    // FIX is here 👇
+    // FIX: include is_staff for admin detection
     res.json({
       token,
       user: {
@@ -123,7 +124,7 @@ app.post("/api/login", (req, res) => {
         name: user.name,
         email: user.email,
         isAdmin: user.isAdmin,
-        is_staff: user.isAdmin   // <-- ADD THIS LINE
+        is_staff: user.isAdmin
       }
     });
 
@@ -132,7 +133,6 @@ app.post("/api/login", (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 // get profile
 app.get("/api/profile/:id", (req, res) => {
@@ -228,6 +228,72 @@ app.post("/api/cart", (req, res) => {
     res.json({ message: "Added to cart" });
   } catch (err) {
     console.error("Cart error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// ---------------- ORDERS ----------------
+
+// Place a new order
+app.post("/api/orders", (req, res) => {
+  try {
+    const { userId, fullName, phone, deliveryAddress, products } = req.body;
+
+    if (!userId || !fullName || !phone || !deliveryAddress || !products?.length) {
+      return res.status(400).json({ message: "Missing order information" });
+    }
+
+    const totalPrice = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+    const orders = readData(ordersFile);
+
+    const newOrder = {
+      id: Date.now(),
+      userId,
+      fullName,
+      phone,
+      deliveryAddress,
+      products,
+      totalPrice,
+      status: "pending"
+    };
+
+    orders.push(newOrder);
+    writeData(ordersFile, orders);
+
+    res.json({ message: "Order successfully placed", order: newOrder });
+  } catch (err) {
+    console.error("Order placement error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Get all orders (admin)
+app.get("/api/orders", (req, res) => {
+  try {
+    const orders = readData(ordersFile);
+    res.json(orders);
+  } catch (err) {
+    console.error("Get orders error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// Update order status (e.g., mark as completed)
+app.put("/api/orders/:id", (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body; // expect { status: "completed" }
+    
+    const orders = readData(ordersFile);
+    const index = orders.findIndex(o => o.id == id);
+    if (index === -1) return res.status(404).json({ message: "Order not found" });
+
+    orders[index].status = status || orders[index].status;
+    writeData(ordersFile, orders);
+
+    res.json({ message: "Order updated", order: orders[index] });
+  } catch (err) {
+    console.error("Update order error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });

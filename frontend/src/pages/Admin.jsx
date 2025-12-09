@@ -9,6 +9,8 @@ export default function Admin() {
   const [aboutImages, setAboutImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
+  const [orders, setOrders] = useState([]); // Orders state
+
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   // Fetch products
@@ -33,9 +35,21 @@ export default function Admin() {
     }
   };
 
+  // Fetch orders
+  const fetchOrders = async () => {
+    try {
+      const res = await fetch(`${API}/api/orders`);
+      const data = await res.json();
+      setOrders(data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
     fetchAboutImages();
+    fetchOrders();
   }, [API]);
 
   // Product submit
@@ -92,10 +106,30 @@ export default function Admin() {
     setAboutImages((p) => p.filter((img) => img.id !== id));
   };
 
+  // NEW: Mark order as completed
+  const handleCompleteOrder = async (orderId) => {
+    if (!window.confirm("Mark this order as completed?")) return;
+    try {
+      const updatedOrders = orders.map((o) =>
+        o.id === orderId ? { ...o, status: "completed" } : o
+      );
+      setOrders(updatedOrders);
+
+      await fetch(`${API}/api/orders/${orderId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "completed" }),
+      });
+    } catch (err) {
+      console.error("Error updating order status:", err);
+    }
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen p-6">
       <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600">🛒 Admin Dashboard</h1>
 
+      {/* PRODUCT FORM */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto mb-8">
         <h2 className="text-xl mb-4">{editing ? "Edit Product" : "Add New Product"}</h2>
 
@@ -118,6 +152,7 @@ export default function Admin() {
         <button type="submit" className="bg-yellow-500 text-black px-4 py-2 rounded">{editing ? "Update Product" : "Add Product"}</button>
       </form>
 
+      {/* PRODUCT GRID */}
       <div className="max-w-6xl mx-auto grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
         {products.map((product) => (
           <div key={product.id} className="bg-white p-4 rounded-lg shadow">
@@ -133,8 +168,8 @@ export default function Admin() {
         ))}
       </div>
 
-      {/* About images block */}
-      <div className="max-w-6xl mx-auto bg-gray-900 p-6 rounded-lg text-gray-100">
+      {/* ABOUT IMAGES */}
+      <div className="max-w-6xl mx-auto bg-gray-900 p-6 rounded-lg text-gray-100 mb-8">
         <h3 className="text-lg font-bold text-yellow-400 mb-4">About Page Images</h3>
 
         <form onSubmit={handleAboutUpload} className="mb-4">
@@ -153,6 +188,59 @@ export default function Admin() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ORDERS TABLE */}
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow">
+        <h2 className="text-2xl font-bold mb-4 text-yellow-600">📦 Customer Orders</h2>
+        {orders.length === 0 ? (
+          <p>No orders yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full table-auto border-collapse border border-gray-300">
+              <thead>
+                <tr className="bg-yellow-100">
+                  <th className="border px-4 py-2">Order ID</th>
+                  <th className="border px-4 py-2">Customer</th>
+                  <th className="border px-4 py-2">Phone</th>
+                  <th className="border px-4 py-2">Delivery Address</th>
+                  <th className="border px-4 py-2">Products</th>
+                  <th className="border px-4 py-2">Total (₦)</th>
+                  <th className="border px-4 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {orders.map((order) => (
+                  <tr key={order.id} className="text-center">
+                    <td className="border px-4 py-2">{order.id}</td>
+                    <td className="border px-4 py-2">{order.fullName}</td>
+                    <td className="border px-4 py-2">{order.phone}</td>
+                    <td className="border px-4 py-2">{order.deliveryAddress}</td>
+                    <td className="border px-4 py-2 text-left">
+                      {order.products.map((p) => (
+                        <div key={p.productId}>
+                          {p.name} x {p.quantity} (₦{p.price.toLocaleString()})
+                        </div>
+                      ))}
+                    </td>
+                    <td className="border px-4 py-2">₦{order.totalPrice.toLocaleString()}</td>
+                    <td className="border px-4 py-2">
+                      {order.status}
+                      {order.status !== "completed" && (
+                        <button
+                          onClick={() => handleCompleteOrder(order.id)}
+                          className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-sm"
+                        >
+                          ✅ Complete
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
