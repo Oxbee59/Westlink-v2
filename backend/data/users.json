@@ -10,7 +10,7 @@
     "id": 1,
     "name": "admin",
     "email": "admin@example.com",
-    "password": "$2a$10$F2NldfQz49/HT4m4G5Qy0eVZ9BqOpxhWwzJ1q6Nxx/6EtB.Yz8e0C",
+    "password": "$2b$10$RNXPKMAUCSsRnenQ5jeYZOP3LOk8DuebSMXPltE5iOxUvT82hP.a.",
     "isAdmin": true
   }
 ]
