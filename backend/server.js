@@ -1,19 +1,82 @@
 // server.js
 import express from "express";
 import cors from "cors";
-import fs from "fs";
-import path from "path";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import path from "path";
+import fs from "fs";
 import { fileURLToPath } from "url";
+import pkg from "pg";
+
+const { Pool } = pkg;
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Allow local dev and deployed frontend origin(s)
+// ---------- DATABASE ----------
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL
+});
+
+// create tables if not exist
+async function initTables() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      email TEXT UNIQUE,
+      password TEXT,
+      is_admin BOOLEAN DEFAULT false
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS products (
+      id SERIAL PRIMARY KEY,
+      name TEXT,
+      price NUMERIC,
+      category TEXT,
+      image TEXT
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS carts (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      product_id INTEGER,
+      quantity INTEGER
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS orders (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER,
+      full_name TEXT,
+      phone TEXT,
+      delivery_address TEXT,
+      products JSONB,
+      total_price NUMERIC,
+      status TEXT DEFAULT 'pending'
+    );
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS about_images (
+      id SERIAL PRIMARY KEY,
+      image TEXT
+    );
+  `);
+
+  console.log("📌 PostgreSQL tables ready");
+}
+initTables();
+
+// ---------- CORS ----------
 app.use(
   cors({
     origin: [
@@ -28,333 +91,264 @@ app.use(
 
 app.use(express.json());
 
-// ensure required directories exist
+// ---------- FILE UPLOADS ----------
 const uploadsDir = path.join(__dirname, "uploads");
 const aboutUploadsDir = path.join(uploadsDir, "about");
-const dataDir = path.join(__dirname, "data");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(aboutUploadsDir)) fs.mkdirSync(aboutUploadsDir);
 
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-if (!fs.existsSync(aboutUploadsDir)) fs.mkdirSync(aboutUploadsDir, { recursive: true });
-if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
-
-// serve static uploads
 app.use("/uploads", express.static(uploadsDir));
 
-// data file paths
-const usersFile = path.join(dataDir, "users.json");
-const productsFile = path.join(dataDir, "products.json");
-const cartFile = path.join(dataDir, "carts.json");
-const aboutFile = path.join(dataDir, "about.json");
-const ordersFile = path.join(dataDir, "orders.json"); // <-- new orders file
-
-// ensure json files exist
-for (const f of [usersFile, productsFile, cartFile, aboutFile, ordersFile]) {
-  if (!fs.existsSync(f)) fs.writeFileSync(f, "[]", "utf-8");
-}
-
-// helpers
-const readData = (file) => (fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf-8")) : []);
-const writeData = (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2), "utf-8");
-
-const PORT = process.env.PORT || 5000;
-const SECRET = process.env.SECRET || "westlink_secret_key";
-
-// multer storage (general uploads)
 const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
+  destination: uploadsDir,
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
 });
 const upload = multer({ storage });
 
-// multer storage for about images (saved to /uploads/about)
 const aboutStorage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, aboutUploadsDir),
-  filename: (req, file, cb) => cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
+  destination: aboutUploadsDir,
+  filename: (req, file, cb) =>
+    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
 });
 const aboutUpload = multer({ storage: aboutStorage });
 
-// ---------------- AUTH ----------------
+// ---------- AUTH ----------
 
-// register
-app.post("/api/register", (req, res) => {
+// REGISTER
+app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-    if (!name || !email || !password) return res.status(400).json({ message: "Missing fields" });
 
-    const users = readData(usersFile);
-    if (users.find((u) => u.email === email)) {
-      return res.status(400).json({ message: "Email already registered" });
-    }
+    const hashed = bcrypt.hashSync(password, 10);
 
-    const hashedPassword = bcrypt.hashSync(password, 10);
-    const newUser = { id: Date.now(), name, email, password: hashedPassword, isAdmin: false };
-    users.push(newUser);
-    writeData(usersFile, users);
+    const result = await pool.query(
+      "INSERT INTO users (name, email, password) VALUES ($1,$2,$3) RETURNING id,name,email,is_admin",
+      [name, email, hashed]
+    );
 
-    res.json({ message: "Registration successful", user: { id: newUser.id, name: newUser.name, email: newUser.email } });
+    res.json({ message: "Registration successful", user: result.rows[0] });
   } catch (err) {
-    console.error("Register error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.log(err);
+    res.status(400).json({ message: "Email already registered" });
   }
 });
 
-// login
-app.post("/api/login", (req, res) => {
+// LOGIN
+app.post("/api/login", async (req, res) => {
   try {
     const { email, password } = req.body;
-    const users = readData(usersFile);
 
-    const user = users.find((u) => u.email === email);
+    const result = await pool.query("SELECT * FROM users WHERE email=$1", [email]);
+    const user = result.rows[0];
 
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return res.status(400).json({ message: "Invalid email or password" });
     }
 
     const token = jwt.sign(
-      { id: user.id, isAdmin: user.isAdmin },
-      SECRET,
+      { id: user.id, isAdmin: user.is_admin },
+      process.env.SECRET || "westlink_secret_key",
       { expiresIn: "2h" }
     );
 
-    // FIX: include is_staff for admin detection
     res.json({
       token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
-        isAdmin: user.isAdmin,
-        is_staff: user.isAdmin
-      }
+        isAdmin: user.is_admin,
+        is_staff: user.is_admin,
+      },
     });
-
   } catch (err) {
-    console.error("Login error:", err);
+    console.log(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// get profile
-app.get("/api/profile/:id", (req, res) => {
-  const users = readData(usersFile);
-  const user = users.find((u) => u.id == req.params.id);
-  if (!user) return res.status(404).json({ message: "User not found" });
-  res.json({ id: user.id, name: user.name, email: user.email, isAdmin: user.isAdmin });
+// PROFILE
+app.get("/api/profile/:id", async (req, res) => {
+  const result = await pool.query(
+    "SELECT id,name,email,is_admin FROM users WHERE id=$1",
+    [req.params.id]
+  );
+  if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+  res.json(result.rows[0]);
 });
 
-// ---------------- PRODUCTS ----------------
+// ---------- PRODUCTS ----------
 
-app.get("/api/products", (req, res) => {
-  const products = readData(productsFile);
-  res.json(products);
+// GET all products
+app.get("/api/products", async (req, res) => {
+  const result = await pool.query("SELECT * FROM products ORDER BY id DESC");
+  res.json(result.rows);
 });
 
-app.post("/api/products", upload.single("image"), (req, res) => {
+// ADD product
+app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
-    const products = readData(productsFile);
     const { name, price, category } = req.body;
-    const newProduct = {
-      id: Date.now(),
-      name,
-      price: Number(price || 0),
-      category: category || "Other Materials",
-      image: req.file ? `/uploads/${req.file.filename}` : "",
-    };
-    products.push(newProduct);
-    writeData(productsFile, products);
-    res.json(newProduct);
+
+    const image = req.file ? `/uploads/${req.file.filename}` : "";
+
+    const result = await pool.query(
+      `INSERT INTO products (name, price, category, image)
+       VALUES ($1,$2,$3,$4) RETURNING *`,
+      [name, price, category, image]
+    );
+
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error("Add product error:", err);
+    console.log(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.put("/api/products/:id", upload.single("image"), (req, res) => {
+// UPDATE product
+app.put("/api/products/:id", upload.single("image"), async (req, res) => {
   try {
-    const products = readData(productsFile);
-    const index = products.findIndex((p) => p.id == req.params.id);
-    if (index === -1) return res.status(404).json({ message: "Product not found" });
+    const { name, price, category } = req.body;
 
-    const updated = {
-      ...products[index],
-      name: req.body.name || products[index].name,
-      price: req.body.price ? Number(req.body.price) : products[index].price,
-      category: req.body.category || products[index].category,
-      image: req.file ? `/uploads/${req.file.filename}` : products[index].image,
-    };
+    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [
+      req.params.id,
+    ]);
 
-    products[index] = updated;
-    writeData(productsFile, products);
-    res.json(updated);
+    if (!existing.rows.length)
+      return res.status(404).json({ message: "Product not found" });
+
+    const image = req.file ? `/uploads/${req.file.filename}` : existing.rows[0].image;
+
+    const result = await pool.query(
+      `UPDATE products SET name=$1, price=$2, category=$3, image=$4 WHERE id=$5 RETURNING *`,
+      [name, price, category, image, req.params.id]
+    );
+
+    res.json(result.rows[0]);
   } catch (err) {
-    console.error("Update product error:", err);
+    console.log(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-app.delete("/api/products/:id", (req, res) => {
+// DELETE product
+app.delete("/api/products/:id", async (req, res) => {
   try {
-    let products = readData(productsFile);
-    const productToDelete = products.find((p) => p.id == req.params.id);
-    if (productToDelete && productToDelete.image) {
-      const filePath = path.join(__dirname, productToDelete.image);
-      if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-    }
-    products = products.filter((p) => p.id != req.params.id);
-    writeData(productsFile, products);
+    await pool.query("DELETE FROM products WHERE id=$1", [req.params.id]);
     res.json({ message: "Product deleted" });
   } catch (err) {
-    console.error("Delete product error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ---------------- CART ----------------
-
-app.get("/api/cart/:userId", (req, res) => {
-  const carts = readData(cartFile);
-  const userCart = carts.filter((item) => item.userId == req.params.userId);
-  res.json(userCart);
+// ---------- CART ----------
+app.get("/api/cart/:userId", async (req, res) => {
+  const result = await pool.query("SELECT * FROM carts WHERE user_id=$1", [
+    req.params.userId,
+  ]);
+  res.json(result.rows);
 });
 
-app.post("/api/cart", (req, res) => {
+app.post("/api/cart", async (req, res) => {
   try {
-    const carts = readData(cartFile);
     const { userId, productId, quantity } = req.body;
-    const existing = carts.find((item) => item.userId == userId && item.productId == productId);
-    if (existing) existing.quantity += Number(quantity || 1);
-    else carts.push({ id: Date.now(), userId, productId, quantity: Number(quantity || 1) });
-    writeData(cartFile, carts);
+
+    const existing = await pool.query(
+      "SELECT * FROM carts WHERE user_id=$1 AND product_id=$2",
+      [userId, productId]
+    );
+
+    if (existing.rows.length) {
+      await pool.query(
+        "UPDATE carts SET quantity = quantity + $1 WHERE id=$2",
+        [quantity, existing.rows[0].id]
+      );
+    } else {
+      await pool.query(
+        "INSERT INTO carts (user_id, product_id, quantity) VALUES ($1,$2,$3)",
+        [userId, productId, quantity]
+      );
+    }
+
     res.json({ message: "Added to cart" });
   } catch (err) {
-    console.error("Cart error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// ---------------- ORDERS ----------------
+// ---------- ORDERS ----------
 
-// Place a new order
-app.post("/api/orders", (req, res) => {
+// PLACE ORDER
+app.post("/api/orders", async (req, res) => {
   try {
     const { userId, fullName, phone, deliveryAddress, products } = req.body;
 
-    if (!userId || !fullName || !phone || !deliveryAddress || !products?.length) {
-      return res.status(400).json({ message: "Missing order information" });
-    }
+    const total = products.reduce(
+      (sum, p) => sum + p.price * p.quantity,
+      0
+    );
 
-    const totalPrice = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
-    const orders = readData(ordersFile);
+    const result = await pool.query(
+      `INSERT INTO orders (user_id, full_name, phone, delivery_address, products, total_price)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING *`,
+      [userId, fullName, phone, deliveryAddress, JSON.stringify(products), total]
+    );
 
-    const newOrder = {
-      id: Date.now(),
-      userId,
-      fullName,
-      phone,
-      deliveryAddress,
-      products,
-      totalPrice,
-      status: "pending"
-    };
-
-    orders.push(newOrder);
-    writeData(ordersFile, orders);
-
-    res.json({ message: "Order successfully placed", order: newOrder });
+    res.json({ message: "Order placed", order: result.rows[0] });
   } catch (err) {
-    console.error("Order placement error:", err);
+    console.log(err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// Get all orders (admin)
-app.get("/api/orders", (req, res) => {
-  try {
-    const orders = readData(ordersFile);
-    res.json(orders);
-  } catch (err) {
-    console.error("Get orders error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+// GET all orders (admin)
+app.get("/api/orders", async (req, res) => {
+  const result = await pool.query("SELECT * FROM orders ORDER BY id DESC");
+  res.json(result.rows);
 });
 
-// Update order status (e.g., mark as completed)
-app.put("/api/orders/:id", (req, res) => {
-  try {
-    const { id } = req.params;
-    const { status } = req.body; // expect { status: "completed" }
-    
-    const orders = readData(ordersFile);
-    const index = orders.findIndex(o => o.id == id);
-    if (index === -1) return res.status(404).json({ message: "Order not found" });
-
-    orders[index].status = status || orders[index].status;
-    writeData(ordersFile, orders);
-
-    res.json({ message: "Order updated", order: orders[index] });
-  } catch (err) {
-    console.error("Update order error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
-});
-// Get orders for a specific user (for customer view)
-app.get("/api/orders/user/:userId", (req, res) => {
-  try {
-    const { userId } = req.params;
-    const orders = readData(ordersFile);
-
-    // Filter orders that belong to the user
-    const userOrders = orders.filter((o) => o.userId == userId);
-
-    res.json({ orders: userOrders });
-  } catch (err) {
-    console.error("Get user orders error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+// UPDATE order status
+app.put("/api/orders/:id", async (req, res) => {
+  const result = await pool.query(
+    "UPDATE orders SET status=$1 WHERE id=$2 RETURNING *",
+    [req.body.status, req.params.id]
+  );
+  res.json(result.rows[0]);
 });
 
-
-// ---------------- ABOUT IMAGES ----------------
-
-// generic about list (also used for admin list)
-app.get("/api/about-images", (req, res) => {
-  const aboutImages = readData(aboutFile);
-  res.json(aboutImages);
+// GET orders for specific user
+app.get("/api/orders/user/:userId", async (req, res) => {
+  const result = await pool.query(
+    "SELECT * FROM orders WHERE user_id=$1 ORDER BY id DESC",
+    [req.params.userId]
+  );
+  res.json(result.rows);
 });
 
-// upload about image (saves to uploads/about)
-app.post("/api/about-images", aboutUpload.single("image"), (req, res) => {
-  try {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
-    const aboutImages = readData(aboutFile);
-    const newImage = { id: Date.now(), image: `/uploads/about/${req.file.filename}` };
-    aboutImages.push(newImage);
-    writeData(aboutFile, aboutImages);
-    res.json(newImage);
-  } catch (err) {
-    console.error("About upload error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+// ---------- ABOUT IMAGES ----------
+app.get("/api/about-images", async (req, res) => {
+  const result = await pool.query("SELECT * FROM about_images ORDER BY id DESC");
+  res.json(result.rows);
 });
 
-// delete about image
-app.delete("/api/about-images/:id", (req, res) => {
-  try {
-    let aboutImages = readData(aboutFile);
-    const imageToDelete = aboutImages.find((img) => img.id == req.params.id);
-    if (!imageToDelete) return res.status(404).json({ message: "Image not found" });
+app.post("/api/about-images", aboutUpload.single("image"), async (req, res) => {
+  if (!req.file) return res.status(400).json({ message: "No file" });
 
-    const filePath = path.join(__dirname, imageToDelete.image);
-    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
-
-    aboutImages = aboutImages.filter((img) => img.id != req.params.id);
-    writeData(aboutFile, aboutImages);
-    res.json({ message: "Deleted" });
-  } catch (err) {
-    console.error("About delete error:", err);
-    res.status(500).json({ message: "Server error" });
-  }
+  const result = await pool.query(
+    "INSERT INTO about_images (image) VALUES ($1) RETURNING *",
+    [`/uploads/about/${req.file.filename}`]
+  );
+  res.json(result.rows[0]);
 });
 
-// ---------------- START ----------------
-app.listen(PORT, () => console.log(`✅ Server running on port ${PORT}`));
+app.delete("/api/about-images/:id", async (req, res) => {
+  await pool.query("DELETE FROM about_images WHERE id=$1", [req.params.id]);
+  res.json({ message: "Deleted" });
+});
+
+// ---------- START ----------
+app.listen(process.env.PORT || 5000, () =>
+  console.log("🚀 Server running with PostgreSQL")
+);
