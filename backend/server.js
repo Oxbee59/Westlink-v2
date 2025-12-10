@@ -10,73 +10,84 @@ import { fileURLToPath } from "url";
 import pkg from "pg";
 
 const { Pool } = pkg;
-
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
 
 // ---------- DATABASE ----------
+if (!process.env.DATABASE_URL) {
+  console.error("❌ DATABASE_URL not set in environment variables");
+  process.exit(1);
+}
+
 const pool = new Pool({
-  connectionString: process.env.DATABASE_URL
+  connectionString: process.env.DATABASE_URL,
 });
 
 // create tables if not exist
 async function initTables() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS users (
-      id SERIAL PRIMARY KEY,
-      name TEXT,
-      email TEXT UNIQUE,
-      password TEXT,
-      is_admin BOOLEAN DEFAULT false
-    );
-  `);
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        email TEXT UNIQUE,
+        password TEXT,
+        is_admin BOOLEAN DEFAULT false
+      );
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS products (
-      id SERIAL PRIMARY KEY,
-      name TEXT,
-      price NUMERIC,
-      category TEXT,
-      image TEXT
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name TEXT,
+        price NUMERIC,
+        category TEXT,
+        image TEXT
+      );
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS carts (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER,
-      product_id INTEGER,
-      quantity INTEGER
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS carts (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        product_id INTEGER,
+        quantity INTEGER
+      );
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS orders (
-      id SERIAL PRIMARY KEY,
-      user_id INTEGER,
-      full_name TEXT,
-      phone TEXT,
-      delivery_address TEXT,
-      products JSONB,
-      total_price NUMERIC,
-      status TEXT DEFAULT 'pending'
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS orders (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        full_name TEXT,
+        phone TEXT,
+        delivery_address TEXT,
+        products JSONB,
+        total_price NUMERIC,
+        status TEXT DEFAULT 'pending'
+      );
+    `);
 
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS about_images (
-      id SERIAL PRIMARY KEY,
-      image TEXT
-    );
-  `);
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS about_images (
+        id SERIAL PRIMARY KEY,
+        image TEXT
+      );
+    `);
 
-  console.log("📌 PostgreSQL tables ready");
+    console.log("📌 PostgreSQL tables ready");
+  } catch (err) {
+    console.error("❌ Error initializing tables:", err);
+    process.exit(1);
+  }
 }
 initTables();
 
-// ---------- CORS ----------
+// ---------- MIDDLEWARE ----------
+app.use(express.json());
+
 app.use(
   cors({
     origin: [
@@ -88,8 +99,6 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-
-app.use(express.json());
 
 // ---------- FILE UPLOADS ----------
 const uploadsDir = path.join(__dirname, "uploads");
@@ -119,7 +128,6 @@ const aboutUpload = multer({ storage: aboutStorage });
 app.post("/api/register", async (req, res) => {
   try {
     const { name, email, password } = req.body;
-
     const hashed = bcrypt.hashSync(password, 10);
 
     const result = await pool.query(
@@ -128,8 +136,9 @@ app.post("/api/register", async (req, res) => {
     );
 
     res.json({ message: "Registration successful", user: result.rows[0] });
+    console.log(`[${new Date().toISOString()}] User registered: ${email}`);
   } catch (err) {
-    console.log(err);
+    console.error(`[${new Date().toISOString()}] Register error:`, err);
     res.status(400).json({ message: "Email already registered" });
   }
 });
@@ -162,35 +171,42 @@ app.post("/api/login", async (req, res) => {
         is_staff: user.is_admin,
       },
     });
+    console.log(`[${new Date().toISOString()}] User logged in: ${email}`);
   } catch (err) {
-    console.log(err);
+    console.error(`[${new Date().toISOString()}] Login error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 // PROFILE
 app.get("/api/profile/:id", async (req, res) => {
-  const result = await pool.query(
-    "SELECT id,name,email,is_admin FROM users WHERE id=$1",
-    [req.params.id]
-  );
-  if (!result.rows.length) return res.status(404).json({ message: "User not found" });
-  res.json(result.rows[0]);
+  try {
+    const result = await pool.query(
+      "SELECT id,name,email,is_admin FROM users WHERE id=$1",
+      [req.params.id]
+    );
+    if (!result.rows.length) return res.status(404).json({ message: "User not found" });
+    res.json(result.rows[0]);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Profile error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // ---------- PRODUCTS ----------
-
-// GET all products
 app.get("/api/products", async (req, res) => {
-  const result = await pool.query("SELECT * FROM products ORDER BY id DESC");
-  res.json(result.rows);
+  try {
+    const result = await pool.query("SELECT * FROM products ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Get products error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-// ADD product
 app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
     const { name, price, category } = req.body;
-
     const image = req.file ? `/uploads/${req.file.filename}` : "";
 
     const result = await pool.query(
@@ -200,23 +216,19 @@ app.post("/api/products", upload.single("image"), async (req, res) => {
     );
 
     res.json(result.rows[0]);
+    console.log(`[${new Date().toISOString()}] Product added: ${name}`);
   } catch (err) {
-    console.log(err);
+    console.error(`[${new Date().toISOString()}] Add product error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// UPDATE product
 app.put("/api/products/:id", upload.single("image"), async (req, res) => {
   try {
     const { name, price, category } = req.body;
 
-    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [
-      req.params.id,
-    ]);
-
-    if (!existing.rows.length)
-      return res.status(404).json({ message: "Product not found" });
+    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [req.params.id]);
+    if (!existing.rows.length) return res.status(404).json({ message: "Product not found" });
 
     const image = req.file ? `/uploads/${req.file.filename}` : existing.rows[0].image;
 
@@ -226,28 +238,33 @@ app.put("/api/products/:id", upload.single("image"), async (req, res) => {
     );
 
     res.json(result.rows[0]);
+    console.log(`[${new Date().toISOString()}] Product updated: ${name}`);
   } catch (err) {
-    console.log(err);
+    console.error(`[${new Date().toISOString()}] Update product error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// DELETE product
 app.delete("/api/products/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM products WHERE id=$1", [req.params.id]);
     res.json({ message: "Product deleted" });
+    console.log(`[${new Date().toISOString()}] Product deleted ID: ${req.params.id}`);
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] Delete product error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 // ---------- CART ----------
 app.get("/api/cart/:userId", async (req, res) => {
-  const result = await pool.query("SELECT * FROM carts WHERE user_id=$1", [
-    req.params.userId,
-  ]);
-  res.json(result.rows);
+  try {
+    const result = await pool.query("SELECT * FROM carts WHERE user_id=$1", [req.params.userId]);
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Get cart error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.post("/api/cart", async (req, res) => {
@@ -272,83 +289,109 @@ app.post("/api/cart", async (req, res) => {
     }
 
     res.json({ message: "Added to cart" });
+    console.log(`[${new Date().toISOString()}] Cart updated for user ID: ${userId}`);
   } catch (err) {
+    console.error(`[${new Date().toISOString()}] Cart error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 // ---------- ORDERS ----------
-
-// PLACE ORDER
 app.post("/api/orders", async (req, res) => {
   try {
     const { userId, fullName, phone, deliveryAddress, products } = req.body;
 
-    const total = products.reduce(
-      (sum, p) => sum + p.price * p.quantity,
-      0
-    );
+    const total = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
 
     const result = await pool.query(
       `INSERT INTO orders (user_id, full_name, phone, delivery_address, products, total_price)
-       VALUES ($1,$2,$3,$4,$5,$6)
-       RETURNING *`,
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
       [userId, fullName, phone, deliveryAddress, JSON.stringify(products), total]
     );
 
     res.json({ message: "Order placed", order: result.rows[0] });
+    console.log(`[${new Date().toISOString()}] Order placed by user ID: ${userId}`);
   } catch (err) {
-    console.log(err);
+    console.error(`[${new Date().toISOString()}] Place order error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
-// GET all orders (admin)
 app.get("/api/orders", async (req, res) => {
-  const result = await pool.query("SELECT * FROM orders ORDER BY id DESC");
-  res.json(result.rows);
+  try {
+    const result = await pool.query("SELECT * FROM orders ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Get all orders error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-// UPDATE order status
 app.put("/api/orders/:id", async (req, res) => {
-  const result = await pool.query(
-    "UPDATE orders SET status=$1 WHERE id=$2 RETURNING *",
-    [req.body.status, req.params.id]
-  );
-  res.json(result.rows[0]);
+  try {
+    const result = await pool.query(
+      "UPDATE orders SET status=$1 WHERE id=$2 RETURNING *",
+      [req.body.status, req.params.id]
+    );
+    res.json(result.rows[0]);
+    console.log(`[${new Date().toISOString()}] Order updated ID: ${req.params.id}`);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Update order error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
-// GET orders for specific user
 app.get("/api/orders/user/:userId", async (req, res) => {
-  const result = await pool.query(
-    "SELECT * FROM orders WHERE user_id=$1 ORDER BY id DESC",
-    [req.params.userId]
-  );
-  res.json(result.rows);
+  try {
+    const result = await pool.query(
+      "SELECT * FROM orders WHERE user_id=$1 ORDER BY id DESC",
+      [req.params.userId]
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Get user orders error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // ---------- ABOUT IMAGES ----------
 app.get("/api/about-images", async (req, res) => {
-  const result = await pool.query("SELECT * FROM about_images ORDER BY id DESC");
-  res.json(result.rows);
+  try {
+    const result = await pool.query("SELECT * FROM about_images ORDER BY id DESC");
+    res.json(result.rows);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Get about images error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.post("/api/about-images", aboutUpload.single("image"), async (req, res) => {
-  if (!req.file) return res.status(400).json({ message: "No file" });
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file" });
 
-  const result = await pool.query(
-    "INSERT INTO about_images (image) VALUES ($1) RETURNING *",
-    [`/uploads/about/${req.file.filename}`]
-  );
-  res.json(result.rows[0]);
+    const result = await pool.query(
+      "INSERT INTO about_images (image) VALUES ($1) RETURNING *",
+      [`/uploads/about/${req.file.filename}`]
+    );
+    res.json(result.rows[0]);
+    console.log(`[${new Date().toISOString()}] About image uploaded: ${req.file.filename}`);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] About image upload error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 app.delete("/api/about-images/:id", async (req, res) => {
-  await pool.query("DELETE FROM about_images WHERE id=$1", [req.params.id]);
-  res.json({ message: "Deleted" });
+  try {
+    await pool.query("DELETE FROM about_images WHERE id=$1", [req.params.id]);
+    res.json({ message: "Deleted" });
+    console.log(`[${new Date().toISOString()}] About image deleted ID: ${req.params.id}`);
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Delete about image error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // ---------- START ----------
-app.listen(process.env.PORT || 5000, () =>
-  console.log("🚀 Server running with PostgreSQL")
-);
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} with PostgreSQL`));
