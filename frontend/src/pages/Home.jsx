@@ -16,15 +16,17 @@ export default function Home() {
       .catch((err) => console.error("Error loading products:", err));
   }, [API]);
 
-  const categories = [
-    "All",
-    "Babies Corner",
-    "Wines & Alcohol",
-    "Beverages",
-    "Lotions & Body Care",
-    "Cooking Utensils",
-    "Other Materials",
-  ];
+ const categories = [
+  "All",
+  "Babies Corner",
+  "Wines & Alcohol",
+  "Beverages",
+  "Lotions & Body Care",
+  "Cooking Essentials",   // ✅ NEW CATEGORY
+  "Cooking Utensils",
+  "Other Materials",
+];
+
 
   const filteredProducts =
     activeCategory === "All"

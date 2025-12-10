@@ -144,6 +144,7 @@ export default function Admin() {
           <option value="Lotions & Body Care">Lotions & Body Care</option>
           <option value="Cooking Utensils">Cooking Utensils</option>
           <option value="Other Materials">Other Materials</option>
+          <option value="Cooking Essentials">Cooking Essentials</option>
         </select>
 
         <input type="file" onChange={handleFileChange} accept="image/*" className="w-full mb-3" />
