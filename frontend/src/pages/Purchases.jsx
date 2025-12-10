@@ -1,20 +1,25 @@
 import { useEffect, useState } from "react";
 
-function Purchases() {
+export default function Purchases() {
   const [orders, setOrders] = useState([]);
   const [user, setUser] = useState(null);
 
+  // Define API base URL (same as in Home.jsx)
+  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
   useEffect(() => {
-  const storedUser = localStorage.getItem("user");
-  if (storedUser) {
-    const parsed = JSON.parse(storedUser);
-    setUser(parsed);
-    fetch(`${API}/api/orders/user/${parsed.id}`)
-      .then(res => res.json())
-      .then(data => setOrders(data.orders || []))
-      .catch(err => console.error(err));
-  }
-}, []);
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      const parsed = JSON.parse(storedUser);
+      setUser(parsed);
+
+      // Fetch orders for this user
+      fetch(`${API}/api/orders/user/${parsed.id}`)
+        .then((res) => res.json())
+        .then((data) => setOrders(data.orders || []))
+        .catch((err) => console.error("Error fetching orders:", err));
+    }
+  }, [API]);
 
   if (!user)
     return (
@@ -26,6 +31,7 @@ function Purchases() {
   return (
     <div className="max-w-3xl mx-auto mt-10 bg-white p-6 rounded shadow">
       <h2 className="text-xl font-bold mb-4 text-yellow-600">My Purchases</h2>
+
       {orders.length === 0 ? (
         <p>No purchases found.</p>
       ) : (
@@ -34,21 +40,26 @@ function Purchases() {
             <li key={order.id} className="py-3">
               <p>
                 <strong>Order Date:</strong>{" "}
-                {new Date(order.id).toLocaleDateString()}{" "}
-                <span className={`ml-2 px-2 py-1 rounded text-white text-sm ${
-                  order.status === "completed" ? "bg-green-500" : "bg-yellow-500"
-                }`}>
-                  {order.status === "completed" ? "Completed ✅" : "Pending ⏳"}
-                </span>
+                {new Date(order.date || order.id).toLocaleDateString()}
               </p>
-
               <p>
                 <strong>Total:</strong> ₦{Number(order.totalPrice).toLocaleString()}
               </p>
-
+              <p>
+                <strong>Status:</strong>{" "}
+                <span
+                  className={`font-semibold ${
+                    order.status === "completed"
+                      ? "text-green-600"
+                      : "text-yellow-600"
+                  }`}
+                >
+                  {order.status}
+                </span>
+              </p>
               <p>
                 <strong>Items:</strong>{" "}
-                {order.products.map((i) => `${i.name} × ${i.quantity || 1}`).join(", ")}
+                {order.products.map((i) => i.name).join(", ")}
               </p>
             </li>
           ))}
@@ -57,5 +68,3 @@ function Purchases() {
     </div>
   );
 }
-
-export default Purchases;
