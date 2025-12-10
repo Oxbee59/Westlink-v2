@@ -5,17 +5,16 @@ function Purchases() {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
-    if (storedUser) {
-      const parsed = JSON.parse(storedUser);
-      setUser(parsed);
-
-      fetch(`http://localhost:5000/api/orders/user/${parsed.id}`)
-        .then((res) => res.json())
-        .then((data) => setOrders(data.orders || []))
-        .catch((err) => console.error(err));
-    }
-  }, []);
+  const storedUser = localStorage.getItem("user");
+  if (storedUser) {
+    const parsed = JSON.parse(storedUser);
+    setUser(parsed);
+    fetch(`${API}/api/orders/user/${parsed.id}`)
+      .then(res => res.json())
+      .then(data => setOrders(data.orders || []))
+      .catch(err => console.error(err));
+  }
+}, []);
 
   if (!user)
     return (
