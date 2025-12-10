@@ -28,7 +28,7 @@ export default function Navbar() {
       <nav className="bg-dark text-gold shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button onClick={() => setMenuOpen(true)} className="text-gold focus:outline-none md:hidden">
+            <button onClick={() => setMenuOpen(true)} className="text-gold focus:outline-none">
               <Menu size={24} />
             </button>
 

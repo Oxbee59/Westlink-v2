@@ -21,8 +21,8 @@ export default function About() {
 
       <div className="mb-6 space-y-2 text-gray-700">
         <p>📍 <strong>Location:</strong> New Owerri, Imo State, Nigeria</p>
-        <p>🌐 <strong>Google Business:</strong> <a href="https://g.page/WESTLINK-Supermarket" target="_blank" rel="noreferrer" className="text-yellow-500 underline ml-1">Visit our Google profile</a></p>
-        <p>📘 <strong>Facebook:</strong> <a href="https://facebook.com/WESTLINKSupermarket" target="_blank" rel="noreferrer" className="text-yellow-500 underline ml-1">@WESTLINKSupermarket</a></p>
+        <p>🌐 <strong>Google Business:</strong> <a href="https://share.google/GJ2WTsdy5T6QvdC4o" target="_blank" rel="noreferrer" className="text-yellow-500 underline ml-1">Visit our Google profile</a></p>
+        <p>📘 <strong>Facebook:</strong> <a href="https://web.facebook.com/profile.php?id=61571621041191" target="_blank" rel="noreferrer" className="text-yellow-500 underline ml-1">@WESTLINKSupermarket</a></p>
       </div>
 
       {aboutImages.length > 0 && (
