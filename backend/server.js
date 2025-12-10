@@ -297,6 +297,22 @@ app.put("/api/orders/:id", (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// Get orders for a specific user (for customer view)
+app.get("/api/orders/user/:userId", (req, res) => {
+  try {
+    const { userId } = req.params;
+    const orders = readData(ordersFile);
+
+    // Filter orders that belong to the user
+    const userOrders = orders.filter((o) => o.userId == userId);
+
+    res.json({ orders: userOrders });
+  } catch (err) {
+    console.error("Get user orders error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // ---------------- ABOUT IMAGES ----------------
 
