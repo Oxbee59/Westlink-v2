@@ -1,7 +1,7 @@
 // server.js
 import express from "express";
 import cors from "cors";
-import multer from "multer";
+
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -9,11 +9,20 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import pkg from "pg";
 
+import { createClient } from "@supabase/supabase-js";
+import multer from "multer";
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_KEY
+);
+
 const { Pool } = pkg;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
+
 
 // ---------- DATABASE ----------
 if (!process.env.DATABASE_URL) {
@@ -100,27 +109,6 @@ app.use(
   })
 );
 
-// ---------- FILE UPLOADS ----------
-const uploadsDir = path.join(__dirname, "uploads");
-const aboutUploadsDir = path.join(uploadsDir, "about");
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
-if (!fs.existsSync(aboutUploadsDir)) fs.mkdirSync(aboutUploadsDir);
-
-app.use("/uploads", express.static(uploadsDir));
-
-const storage = multer.diskStorage({
-  destination: uploadsDir,
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
-});
-const upload = multer({ storage });
-
-const aboutStorage = multer.diskStorage({
-  destination: aboutUploadsDir,
-  filename: (req, file, cb) =>
-    cb(null, Date.now() + "-" + file.originalname.replace(/\s+/g, "_")),
-});
-const aboutUpload = multer({ storage: aboutStorage });
 
 // ---------- AUTH ----------
 
@@ -193,68 +181,121 @@ app.get("/api/profile/:id", async (req, res) => {
   }
 });
 
-// ---------- PRODUCTS ----------
+
+// Store files in memory instead of local disk
+const upload = multer({ storage: multer.memoryStorage() });
+
+
+// ---------------------- HELPER: UPLOAD TO SUPABASE ----------------------
+async function uploadToSupabase(file, bucketName) {
+  if (!file) return "";
+
+  const fileName = Date.now() + "-" + file.originalname.replace(/\s+/g, "_");
+
+  const { data, error } = await supabase.storage
+    .from(bucketName)
+    .upload(fileName, file.buffer, {
+      contentType: file.mimetype,
+      upsert: false,
+    });
+
+  if (error) {
+    console.error("Supabase upload error:", error);
+    return "";
+  }
+
+  // Return public CDN URL
+  return `${process.env.SUPABASE_URL}/storage/v1/object/public/${bucketName}/${fileName}`;
+}
+
+
+
+// --------------------------------------------------------------------
+// --------------------------- PRODUCTS -------------------------------
+// --------------------------------------------------------------------
+
 app.get("/api/products", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM products ORDER BY id DESC");
     res.json(result.rows);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Get products error:`, err);
+    console.error("Get products error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+
+// --- ADD PRODUCT WITH SUPABASE IMAGE ---
 app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
     const { name, price, category } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : "";
+
+    // Upload to Supabase
+    const imageUrl = await uploadToSupabase(req.file, "products");
 
     const result = await pool.query(
       `INSERT INTO products (name, price, category, image)
        VALUES ($1,$2,$3,$4) RETURNING *`,
-      [name, price, category, image]
+      [name, price, category, imageUrl]
     );
 
     res.json(result.rows[0]);
-    console.log(`[${new Date().toISOString()}] Product added: ${name}`);
+    console.log("Product added:", name);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Add product error:`, err);
+    console.error("Add product error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+
+// --- UPDATE PRODUCT WITH OPTIONAL NEW IMAGE ---
 app.put("/api/products/:id", upload.single("image"), async (req, res) => {
   try {
     const { name, price, category } = req.body;
 
-    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [req.params.id]);
-    if (!existing.rows.length) return res.status(404).json({ message: "Product not found" });
+    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [
+      req.params.id,
+    ]);
 
-    const image = req.file ? `/uploads/${req.file.filename}` : existing.rows[0].image;
+    if (!existing.rows.length)
+      return res.status(404).json({ message: "Product not found" });
+
+    let imageUrl = existing.rows[0].image;
+
+    // If new file uploaded → replace the image
+    if (req.file) {
+      imageUrl = await uploadToSupabase(req.file, "products");
+    }
 
     const result = await pool.query(
-      `UPDATE products SET name=$1, price=$2, category=$3, image=$4 WHERE id=$5 RETURNING *`,
-      [name, price, category, image, req.params.id]
+      `UPDATE products SET name=$1, price=$2, category=$3, image=$4 
+       WHERE id=$5 RETURNING *`,
+      [name, price, category, imageUrl, req.params.id]
     );
 
     res.json(result.rows[0]);
-    console.log(`[${new Date().toISOString()}] Product updated: ${name}`);
+    console.log("Product updated:", name);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Update product error:`, err);
+    console.error("Update product error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+
+// --- DELETE PRODUCT ---
 app.delete("/api/products/:id", async (req, res) => {
   try {
     await pool.query("DELETE FROM products WHERE id=$1", [req.params.id]);
     res.json({ message: "Product deleted" });
-    console.log(`[${new Date().toISOString()}] Product deleted ID: ${req.params.id}`);
+    console.log("Product deleted ID:", req.params.id);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Delete product error:`, err);
+    console.error("Delete product error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
+  
 
 // ---------- CART ----------
 app.get("/api/cart/:userId", async (req, res) => {
@@ -353,44 +394,56 @@ app.get("/api/orders/user/:userId", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 // ---------- ABOUT IMAGES ----------
 app.get("/api/about-images", async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM about_images ORDER BY id DESC");
     res.json(result.rows);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Get about images error:`, err);
+    console.error("Get about images error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
-
-app.post("/api/about-images", aboutUpload.single("image"), async (req, res) => {
+app.post("/api/about-images", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file" });
+    if (!req.file)
+      return res.status(400).json({ message: "No file uploaded" });
+
+    // Upload to Supabase bucket: "about"
+    const imageUrl = await uploadToSupabase(req.file, "about");
+
+    if (!imageUrl)
+      return res.status(500).json({ message: "Upload failed" });
 
     const result = await pool.query(
       "INSERT INTO about_images (image) VALUES ($1) RETURNING *",
-      [`/uploads/about/${req.file.filename}`]
+      [imageUrl]
     );
+
     res.json(result.rows[0]);
-    console.log(`[${new Date().toISOString()}] About image uploaded: ${req.file.filename}`);
+    console.log("About image uploaded →", imageUrl);
+
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] About image upload error:`, err);
+    console.error("About image upload error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
 app.delete("/api/about-images/:id", async (req, res) => {
   try {
-    await pool.query("DELETE FROM about_images WHERE id=$1", [req.params.id]);
+    await pool.query("DELETE FROM about_images WHERE id=$1", [
+      req.params.id,
+    ]);
+
     res.json({ message: "Deleted" });
-    console.log(`[${new Date().toISOString()}] About image deleted ID: ${req.params.id}`);
+    console.log("About image deleted ID:", req.params.id);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Delete about image error:`, err);
+    console.error("Delete about image error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
 // DELETE an order (admin only)
 app.delete("/api/orders/:id", async (req, res) => {
   try {

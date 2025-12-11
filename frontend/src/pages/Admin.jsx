@@ -11,8 +11,9 @@ export default function Admin() {
 
   const [orders, setOrders] = useState([]);
 
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend.onrender.com";
 
+  // ---------------- FETCH DATA ----------------
   const fetchProducts = async () => {
     try {
       const res = await fetch(`${API}/api/products`);
@@ -47,7 +48,20 @@ export default function Admin() {
     fetchProducts();
     fetchAboutImages();
     fetchOrders();
-  }, [API]);
+  }, []);
+
+  // ---------------- HANDLE PRODUCT FORM ----------------
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    setForm({ ...form, image: file });
+    setPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const resetForm = () => {
+    setForm({ name: "", price: "", image: null, category: "" });
+    setEditing(null);
+    setPreview(null);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -62,13 +76,17 @@ export default function Admin() {
 
     try {
       await fetch(url, { method, body: formData });
-      setForm({ name: "", price: "", image: null, category: "" });
-      setPreview(null);
-      setEditing(null);
+      resetForm();
       fetchProducts();
     } catch (err) {
       console.error("Product submit error:", err);
     }
+  };
+
+  const handleEditProduct = (product) => {
+    setForm({ name: product.name, price: product.price, image: null, category: product.category || "" });
+    setPreview(product.image?.startsWith("http") ? product.image : `${API}${product.image}`);
+    setEditing(product.id);
   };
 
   const handleDeleteProduct = async (id) => {
@@ -81,18 +99,7 @@ export default function Admin() {
     }
   };
 
-  const handleEditProduct = (product) => {
-    setForm({ name: product.name, price: product.price, image: null, category: product.category || "" });
-    setPreview(product.image?.startsWith("http") ? product.image : `${API}${product.image}`);
-    setEditing(product.id);
-  };
-
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    setForm({ ...form, image: file });
-    if (file) setPreview(URL.createObjectURL(file));
-  };
-
+  // ---------------- ABOUT IMAGES ----------------
   const handleAboutUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) return alert("Select an image");
@@ -120,13 +127,13 @@ export default function Admin() {
     }
   };
 
+  // ---------------- ORDERS ----------------
   const handleCompleteOrder = async (orderId) => {
     if (!window.confirm("Mark this order as completed?")) return;
     try {
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: "completed" } : o))
       );
-
       await fetch(`${API}/api/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -152,6 +159,7 @@ export default function Admin() {
     return !isNaN(n) ? n.toLocaleString() : "0";
   };
 
+  // ---------------- UI ----------------
   return (
     <div className="bg-gray-100 min-h-screen p-6">
 
@@ -201,9 +209,16 @@ export default function Admin() {
           </div>
         )}
 
-        <button type="submit" className="bg-yellow-500 text-black px-4 py-2 rounded">
-          {editing ? "Update Product" : "Add Product"}
-        </button>
+        <div className="flex gap-3">
+          <button type="submit" className="bg-yellow-500 text-black px-4 py-2 rounded">
+            {editing ? "Update Product" : "Add Product"}
+          </button>
+          {editing && (
+            <button type="button" onClick={resetForm} className="bg-gray-600 text-white px-4 py-2 rounded">
+              Cancel
+            </button>
+          )}
+        </div>
       </form>
 
       {/* PRODUCT GRID */}
@@ -215,7 +230,6 @@ export default function Admin() {
               alt={product.name}
               className="w-full h-40 object-cover rounded mb-3"
             />
-
             <h3 className="font-semibold">{product.name}</h3>
             <p className="text-gray-600">₦{formatNumber(product.price)}</p>
 
@@ -264,6 +278,20 @@ export default function Admin() {
             Upload Image
           </button>
         </form>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {aboutImages.map((img) => (
+            <div key={img.id} className="bg-gray-800 p-3 rounded shadow">
+              <img src={img.image} className="w-full h-32 object-cover rounded mb-2" />
+              <button
+                onClick={() => handleDeleteAboutImage(img.id)}
+                className="bg-red-600 text-white px-3 py-1 rounded w-full"
+              >
+                Delete
+              </button>
+            </div>
+          ))}
+        </div>
       </div>
 
       {/* ORDERS TABLE */}
@@ -292,11 +320,9 @@ export default function Admin() {
                 {orders.map((order) => (
                   <tr key={order.id} className="text-center">
                     <td className="border px-4 py-2">{order.id}</td>
-
                     <td className="border px-4 py-2">{order.full_name || "-"}</td>
                     <td className="border px-4 py-2">{order.phone || "-"}</td>
                     <td className="border px-4 py-2">{order.delivery_address || "-"}</td>
-
                     <td className="border px-4 py-2 text-left">
                       {Array.isArray(order.products)
                         ? order.products.map((p, idx) => (
@@ -306,13 +332,8 @@ export default function Admin() {
                           ))
                         : "-"}
                     </td>
-
-                    <td className="border px-4 py-2">
-                      ₦{formatNumber(order.total_price)}
-                    </td>
-
+                    <td className="border px-4 py-2">₦{formatNumber(order.total_price)}</td>
                     <td className="border px-4 py-2">{order.status}</td>
-
                     <td className="border px-4 py-2 space-x-2">
                       {order.status !== "completed" && (
                         <button
@@ -322,7 +343,6 @@ export default function Admin() {
                           ✅ Complete
                         </button>
                       )}
-
                       {order.status === "completed" && (
                         <button
                           onClick={() => handleDeleteOrder(order.id)}
@@ -335,12 +355,10 @@ export default function Admin() {
                   </tr>
                 ))}
               </tbody>
-
             </table>
           </div>
         )}
       </div>
-
     </div>
   );
 }
