@@ -391,6 +391,17 @@ app.delete("/api/about-images/:id", async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+// DELETE an order (admin only)
+app.delete("/api/orders/:id", async (req, res) => {
+  try {
+    await pool.query("DELETE FROM orders WHERE id=$1", [req.params.id]);
+    res.json({ message: "Order deleted" });
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Delete order error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 // ---------- START ----------
 const PORT = process.env.PORT || 5000;

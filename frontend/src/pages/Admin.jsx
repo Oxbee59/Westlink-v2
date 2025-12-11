@@ -9,11 +9,10 @@ export default function Admin() {
   const [aboutImages, setAboutImages] = useState([]);
   const [selectedFile, setSelectedFile] = useState(null);
 
-  const [orders, setOrders] = useState([]); // Orders state
+  const [orders, setOrders] = useState([]);
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  // Fetch products
   const fetchProducts = async () => {
     try {
       const res = await fetch(`${API}/api/products`);
@@ -24,7 +23,6 @@ export default function Admin() {
     }
   };
 
-  // Fetch About images
   const fetchAboutImages = async () => {
     try {
       const res = await fetch(`${API}/api/about-images`);
@@ -35,7 +33,6 @@ export default function Admin() {
     }
   };
 
-  // Fetch orders
   const fetchOrders = async () => {
     try {
       const res = await fetch(`${API}/api/orders`);
@@ -52,7 +49,6 @@ export default function Admin() {
     fetchOrders();
   }, [API]);
 
-  // Product submit (add or edit)
   const handleSubmit = async (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -74,7 +70,7 @@ export default function Admin() {
     }
   };
 
-  const handleDelete = async (id) => {
+  const handleDeleteProduct = async (id) => {
     if (!window.confirm("Are you sure?")) return;
     try {
       await fetch(`${API}/api/products/${id}`, { method: "DELETE" });
@@ -84,7 +80,7 @@ export default function Admin() {
     }
   };
 
-  const handleEdit = (product) => {
+  const handleEditProduct = (product) => {
     setForm({ name: product.name, price: product.price, image: null, category: product.category || "" });
     setPreview(product.image?.startsWith("http") ? product.image : `${API}${product.image}`);
     setEditing(product.id);
@@ -96,7 +92,6 @@ export default function Admin() {
     if (file) setPreview(URL.createObjectURL(file));
   };
 
-  // About upload
   const handleAboutUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) return alert("Select an image");
@@ -105,14 +100,14 @@ export default function Admin() {
     try {
       const res = await fetch(`${API}/api/about-images`, { method: "POST", body: formData });
       const data = await res.json();
-      setAboutImages((p) => [...p, data]);
+      setAboutImages((prev) => [...prev, data]);
       setSelectedFile(null);
     } catch (err) {
       console.error("About upload error:", err);
     }
   };
 
-  const handleDeleteAbout = async (id) => {
+  const handleDeleteAboutImage = async (id) => {
     if (!window.confirm("Delete this image?")) return;
     try {
       await fetch(`${API}/api/about-images/${id}`, { method: "DELETE" });
@@ -122,11 +117,9 @@ export default function Admin() {
     }
   };
 
-  // Mark order as completed
   const handleCompleteOrder = async (orderId) => {
     if (!window.confirm("Mark this order as completed?")) return;
     try {
-      // Optimistic update
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: "completed" } : o))
       );
@@ -136,19 +129,27 @@ export default function Admin() {
         body: JSON.stringify({ status: "completed" }),
       });
     } catch (err) {
-      console.error("Error updating order status:", err);
+      console.error("Complete order error:", err);
     }
   };
 
-  // Helper to safely format numbers
+  const handleDeleteOrder = async (orderId) => {
+    if (!window.confirm("Delete this order?")) return;
+    try {
+      setOrders((prev) => prev.filter((o) => o.id !== orderId));
+      await fetch(`${API}/api/orders/${orderId}`, { method: "DELETE" });
+    } catch (err) {
+      console.error("Delete order error:", err);
+    }
+  };
+
   const formatNumber = (num) => {
-    const n = Number(num);
+    const n = typeof num === "number" ? num : Number(num);
     return !isNaN(n) ? n.toLocaleString() : "0";
   };
 
   return (
     <div className="bg-gray-100 min-h-screen p-6">
-      <h1 className="text-3xl font-bold text-center mb-6 text-yellow-600">🛒 Admin Dashboard</h1>
 
       {/* PRODUCT FORM */}
       <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow max-w-lg mx-auto mb-8">
@@ -162,6 +163,7 @@ export default function Admin() {
           className="w-full mb-3 p-2 border rounded"
           required
         />
+
         <input
           type="number"
           placeholder="Price (₦)"
@@ -188,6 +190,7 @@ export default function Admin() {
         </select>
 
         <input type="file" onChange={handleFileChange} accept="image/*" className="w-full mb-3" />
+
         {preview && (
           <div className="mb-3">
             <img src={preview} alt="Preview" className="w-32 h-32 object-cover rounded border" />
@@ -208,14 +211,16 @@ export default function Admin() {
               alt={product.name}
               className="w-full h-40 object-cover rounded mb-3"
             />
+
             <h3 className="font-semibold">{product.name}</h3>
             <p className="text-gray-600">₦{formatNumber(product.price)}</p>
-            <p className="text-gray-500 text-sm">{product.category}</p>
+
             <div className="flex justify-between mt-3">
-              <button onClick={() => handleEdit(product)} className="bg-blue-500 text-white px-3 py-1 rounded">
+              <button onClick={() => handleEditProduct(product)} className="bg-blue-500 text-white px-3 py-1 rounded">
                 Edit
               </button>
-              <button onClick={() => handleDelete(product.id)} className="bg-red-500 text-white px-3 py-1 rounded">
+
+              <button onClick={() => handleDeleteProduct(product.id)} className="bg-red-500 text-white px-3 py-1 rounded">
                 Delete
               </button>
             </div>
@@ -234,38 +239,23 @@ export default function Admin() {
             accept="image/*"
             className="mb-2"
           />
+
           {selectedFile && (
             <div className="mb-2">
-              <img src={URL.createObjectURL(selectedFile)} alt="preview" className="w-32 h-32 object-cover rounded border" />
+              <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="w-32 h-32 object-cover rounded border" />
             </div>
           )}
+
           <button type="submit" className="bg-yellow-500 text-black px-4 py-2 rounded">
             Upload Image
           </button>
         </form>
-
-        <div className="flex gap-4 flex-wrap">
-          {aboutImages.map((img) => (
-            <div key={img.id} className="text-center relative">
-              <img
-                src={img.image?.startsWith("http") ? img.image : `${API}${img.image}`}
-                alt="about"
-                className="w-36 h-36 object-cover rounded mb-2"
-              />
-              <button
-                onClick={() => handleDeleteAbout(img.id)}
-                className="absolute top-1 right-1 bg-red-500 text-white px-2 py-1 rounded text-sm"
-              >
-                Delete
-              </button>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* ORDERS TABLE */}
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow">
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-8">
         <h2 className="text-2xl font-bold mb-4 text-yellow-600">📦 Customer Orders</h2>
+
         {orders.length === 0 ? (
           <p>No orders yet.</p>
         ) : (
@@ -275,11 +265,10 @@ export default function Admin() {
                 <tr className="bg-yellow-100">
                   <th className="border px-4 py-2">Order ID</th>
                   <th className="border px-4 py-2">Customer</th>
-                  <th className="border px-4 py-2">Phone</th>
-                  <th className="border px-4 py-2">Delivery Address</th>
                   <th className="border px-4 py-2">Products</th>
                   <th className="border px-4 py-2">Total (₦)</th>
                   <th className="border px-4 py-2">Status</th>
+                  <th className="border px-4 py-2">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -287,24 +276,30 @@ export default function Admin() {
                   <tr key={order.id} className="text-center">
                     <td className="border px-4 py-2">{order.id}</td>
                     <td className="border px-4 py-2">{order.fullName || "-"}</td>
-                    <td className="border px-4 py-2">{order.phone || "-"}</td>
-                    <td className="border px-4 py-2">{order.deliveryAddress || "-"}</td>
                     <td className="border px-4 py-2 text-left">
                       {order.products?.map((p, idx) => (
                         <div key={idx}>
-                          {p.name} × {p.quantity} (₦{formatNumber(p.price)})
+                          {p.name} × {p.quantity}
                         </div>
-                      )) || <div>-</div>}
+                      )) || "-"}
                     </td>
                     <td className="border px-4 py-2">₦{formatNumber(order.totalPrice)}</td>
-                    <td className="border px-4 py-2">
-                      {order.status}
+                    <td className="border px-4 py-2">{order.status}</td>
+                    <td className="border px-4 py-2 space-x-2">
                       {order.status !== "completed" && (
                         <button
                           onClick={() => handleCompleteOrder(order.id)}
-                          className="ml-2 bg-green-500 text-white px-2 py-1 rounded text-sm"
+                          className="bg-green-500 text-white px-2 py-1 rounded text-sm"
                         >
                           ✅ Complete
+                        </button>
+                      )}
+                      {order.status === "completed" && (
+                        <button
+                          onClick={() => handleDeleteOrder(order.id)}
+                          className="bg-red-600 text-white px-2 py-1 rounded text-sm"
+                        >
+                          🗑 Delete
                         </button>
                       )}
                     </td>
@@ -315,6 +310,7 @@ export default function Admin() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
