@@ -6,15 +6,21 @@ export default function Cart() {
   const { cartItems, removeFromCart, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const total = cartItems.reduce(
-    (sum, item) => sum + item.price * item.qty,
-    0
-  );
-
-  // ✅ Use environment API base for images
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
-  if (cartItems.length === 0) {
+  // Safely compute total
+  const total = cartItems.reduce((sum, item) => {
+    const price = typeof item.price === "number" ? item.price : Number(item.price);
+    return sum + (isNaN(price) ? 0 : price * (item.qty || 0));
+  }, 0);
+
+  // Format numbers safely
+  const formatNumber = (num) => {
+    const n = typeof num === "number" ? num : Number(num);
+    return !isNaN(n) ? n.toLocaleString() : "0";
+  };
+
+  if (!Array.isArray(cartItems) || cartItems.length === 0) {
     return (
       <div className="text-center mt-20">
         <h2 className="text-2xl font-bold text-gray-700 mb-4">
@@ -54,12 +60,17 @@ export default function Cart() {
               />
 
               <div>
-                <h3 className="font-semibold text-gray-700">{item.name}</h3>
+                <h3 className="font-semibold text-gray-700">
+                  {item.name || "-"}
+                </h3>
+
+                {/* Price × Qty safely */}
                 <p className="text-gray-600">
-                  ₦{item.price.toLocaleString()} × {item.qty}
+                  ₦{formatNumber(item.price)} × {item.qty || 0}
                 </p>
               </div>
             </div>
+
             <button
               onClick={() => removeFromCart(item.id)}
               className="text-red-500 hover:text-red-700"
@@ -69,10 +80,12 @@ export default function Cart() {
           </div>
         ))}
 
+        {/* Total */}
         <div className="flex justify-between items-center mt-6">
           <h3 className="text-lg font-bold text-gray-800">
-            Total: ₦{total.toLocaleString()}
+            Total: ₦{formatNumber(total)}
           </h3>
+
           <div className="space-x-4">
             <button
               onClick={clearCart}

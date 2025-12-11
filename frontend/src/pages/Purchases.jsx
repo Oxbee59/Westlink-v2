@@ -4,7 +4,6 @@ export default function Purchases() {
   const [orders, setOrders] = useState([]);
   const [user, setUser] = useState(null);
 
-  // Define API base URL (same as in Home.jsx)
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
   useEffect(() => {
@@ -16,10 +15,24 @@ export default function Purchases() {
       // Fetch orders for this user
       fetch(`${API}/api/orders/user/${parsed.id}`)
         .then((res) => res.json())
-        .then((data) => setOrders(data.orders || []))
-        .catch((err) => console.error("Error fetching orders:", err));
+        .then((data) => {
+          // Some responses may come as array or object with .orders
+          if (Array.isArray(data)) setOrders(data);
+          else if (Array.isArray(data.orders)) setOrders(data.orders);
+          else setOrders([]);
+        })
+        .catch((err) => {
+          console.error("Error fetching orders:", err);
+          setOrders([]);
+        });
     }
   }, [API]);
+
+  // Safely format numbers
+  const formatNumber = (num) => {
+    const n = typeof num === "number" ? num : Number(num);
+    return !isNaN(n) ? n.toLocaleString() : "0";
+  };
 
   if (!user)
     return (
@@ -40,10 +53,12 @@ export default function Purchases() {
             <li key={order.id} className="py-3">
               <p>
                 <strong>Order Date:</strong>{" "}
-                {new Date(order.date || order.id).toLocaleDateString()}
+                {order.createdAt
+                  ? new Date(order.createdAt).toLocaleDateString()
+                  : new Date().toLocaleDateString()}
               </p>
               <p>
-                <strong>Total:</strong> ₦{Number(order.totalPrice).toLocaleString()}
+                <strong>Total:</strong> ₦{formatNumber(order.totalPrice)}
               </p>
               <p>
                 <strong>Status:</strong>{" "}
@@ -54,12 +69,16 @@ export default function Purchases() {
                       : "text-yellow-600"
                   }`}
                 >
-                  {order.status}
+                  {order.status || "-"}
                 </span>
               </p>
               <p>
                 <strong>Items:</strong>{" "}
-                {order.products.map((i) => i.name).join(", ")}
+                {Array.isArray(order.products) && order.products.length > 0
+                  ? order.products
+                      .map((i) => i.name || "Unknown")
+                      .join(", ")
+                  : "No items"}
               </p>
             </li>
           ))}
