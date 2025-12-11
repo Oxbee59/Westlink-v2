@@ -12,11 +12,9 @@ export default function Purchases() {
       const parsed = JSON.parse(storedUser);
       setUser(parsed);
 
-      // Fetch orders for this user
       fetch(`${API}/api/orders/user/${parsed.id}`)
         .then((res) => res.json())
         .then((data) => {
-          // Some responses may come as array or object with .orders
           if (Array.isArray(data)) setOrders(data);
           else if (Array.isArray(data.orders)) setOrders(data.orders);
           else setOrders([]);
@@ -28,9 +26,9 @@ export default function Purchases() {
     }
   }, [API]);
 
-  // Safely format numbers
+  // Safe formatting
   const formatNumber = (num) => {
-    const n = typeof num === "number" ? num : Number(num);
+    const n = Number(num);
     return !isNaN(n) ? n.toLocaleString() : "0";
   };
 
@@ -53,13 +51,15 @@ export default function Purchases() {
             <li key={order.id} className="py-3">
               <p>
                 <strong>Order Date:</strong>{" "}
-                {order.createdAt
-                  ? new Date(order.createdAt).toLocaleDateString()
-                  : new Date().toLocaleDateString()}
+                {order.created_at
+                  ? new Date(order.created_at).toLocaleDateString()
+                  : "N/A"}
               </p>
+
               <p>
-                <strong>Total:</strong> ₦{formatNumber(order.totalPrice)}
+                <strong>Total:</strong> ₦{formatNumber(order.total_price)}
               </p>
+
               <p>
                 <strong>Status:</strong>{" "}
                 <span
@@ -69,15 +69,14 @@ export default function Purchases() {
                       : "text-yellow-600"
                   }`}
                 >
-                  {order.status || "-"}
+                  {order.status}
                 </span>
               </p>
+
               <p>
                 <strong>Items:</strong>{" "}
                 {Array.isArray(order.products) && order.products.length > 0
-                  ? order.products
-                      .map((i) => i.name || "Unknown")
-                      .join(", ")
+                  ? order.products.map((i) => `${i.name} × ${i.quantity}`).join(", ")
                   : "No items"}
               </p>
             </li>

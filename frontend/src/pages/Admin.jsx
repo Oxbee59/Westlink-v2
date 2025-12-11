@@ -59,6 +59,7 @@ export default function Admin() {
 
     const url = editing ? `${API}/api/products/${editing}` : `${API}/api/products`;
     const method = editing ? "PUT" : "POST";
+
     try {
       await fetch(url, { method, body: formData });
       setForm({ name: "", price: "", image: null, category: "" });
@@ -95,8 +96,10 @@ export default function Admin() {
   const handleAboutUpload = async (e) => {
     e.preventDefault();
     if (!selectedFile) return alert("Select an image");
+
     const formData = new FormData();
     formData.append("image", selectedFile);
+
     try {
       const res = await fetch(`${API}/api/about-images`, { method: "POST", body: formData });
       const data = await res.json();
@@ -123,6 +126,7 @@ export default function Admin() {
       setOrders((prev) =>
         prev.map((o) => (o.id === orderId ? { ...o, status: "completed" } : o))
       );
+
       await fetch(`${API}/api/orders/${orderId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -216,11 +220,17 @@ export default function Admin() {
             <p className="text-gray-600">₦{formatNumber(product.price)}</p>
 
             <div className="flex justify-between mt-3">
-              <button onClick={() => handleEditProduct(product)} className="bg-blue-500 text-white px-3 py-1 rounded">
+              <button
+                onClick={() => handleEditProduct(product)}
+                className="bg-blue-500 text-white px-3 py-1 rounded"
+              >
                 Edit
               </button>
 
-              <button onClick={() => handleDeleteProduct(product.id)} className="bg-red-500 text-white px-3 py-1 rounded">
+              <button
+                onClick={() => handleDeleteProduct(product.id)}
+                className="bg-red-500 text-white px-3 py-1 rounded"
+              >
                 Delete
               </button>
             </div>
@@ -242,7 +252,11 @@ export default function Admin() {
 
           {selectedFile && (
             <div className="mb-2">
-              <img src={URL.createObjectURL(selectedFile)} alt="Preview" className="w-32 h-32 object-cover rounded border" />
+              <img
+                src={URL.createObjectURL(selectedFile)}
+                alt="Preview"
+                className="w-32 h-32 object-cover rounded border"
+              />
             </div>
           )}
 
@@ -265,26 +279,40 @@ export default function Admin() {
                 <tr className="bg-yellow-100">
                   <th className="border px-4 py-2">Order ID</th>
                   <th className="border px-4 py-2">Customer</th>
+                  <th className="border px-4 py-2">Phone</th>
+                  <th className="border px-4 py-2">Delivery Address</th>
                   <th className="border px-4 py-2">Products</th>
                   <th className="border px-4 py-2">Total (₦)</th>
                   <th className="border px-4 py-2">Status</th>
                   <th className="border px-4 py-2">Actions</th>
                 </tr>
               </thead>
+
               <tbody>
                 {orders.map((order) => (
                   <tr key={order.id} className="text-center">
                     <td className="border px-4 py-2">{order.id}</td>
-                    <td className="border px-4 py-2">{order.fullName || "-"}</td>
+
+                    <td className="border px-4 py-2">{order.full_name || "-"}</td>
+                    <td className="border px-4 py-2">{order.phone || "-"}</td>
+                    <td className="border px-4 py-2">{order.delivery_address || "-"}</td>
+
                     <td className="border px-4 py-2 text-left">
-                      {order.products?.map((p, idx) => (
-                        <div key={idx}>
-                          {p.name} × {p.quantity}
-                        </div>
-                      )) || "-"}
+                      {Array.isArray(order.products)
+                        ? order.products.map((p, idx) => (
+                            <div key={idx}>
+                              {p.name} × {p.quantity}
+                            </div>
+                          ))
+                        : "-"}
                     </td>
-                    <td className="border px-4 py-2">₦{formatNumber(order.totalPrice)}</td>
+
+                    <td className="border px-4 py-2">
+                      ₦{formatNumber(order.total_price)}
+                    </td>
+
                     <td className="border px-4 py-2">{order.status}</td>
+
                     <td className="border px-4 py-2 space-x-2">
                       {order.status !== "completed" && (
                         <button
@@ -294,6 +322,7 @@ export default function Admin() {
                           ✅ Complete
                         </button>
                       )}
+
                       {order.status === "completed" && (
                         <button
                           onClick={() => handleDeleteOrder(order.id)}
@@ -306,6 +335,7 @@ export default function Admin() {
                   </tr>
                 ))}
               </tbody>
+
             </table>
           </div>
         )}
