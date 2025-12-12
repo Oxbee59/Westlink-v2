@@ -141,7 +141,7 @@ export default function Home() {
                     <p className="text-xl font-extrabold text-yellow-600">₦{Number(selectedProduct.price).toLocaleString()}</p>
                     {/* placeholder for description if available */}
                     <p className="mt-3 text-gray-700">
-                      {selectedProduct.description || "No description available."}
+                  
                     </p>
                   </div>
 
