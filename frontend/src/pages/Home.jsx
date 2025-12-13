@@ -45,14 +45,13 @@ export default function Home() {
 
   return (
     <div className="bg-[#111] min-h-screen text-white py-6">
-      {/* WRAPPER */}
       <div className="max-w-6xl mx-auto px-4">
         {/* CHRISTMAS BANNER */}
         <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-4 p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center text-center sm:text-left shadow-lg">
           <img
             src={santaDecor}
             alt="Santa decoration"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain sm:object-contain animate-bounce flex-shrink-0"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain animate-bounce flex-shrink-0"
           />
 
           <div className="flex-1">
@@ -171,15 +170,14 @@ export default function Home() {
 
                 {/* DETAILS */}
                 <div className="p-6 flex flex-col gap-4">
-                  <h2 className="text-2xl font-bold text-gray-800">
+                  {/* 🔽 FONT SIZE REDUCED HERE ONLY */}
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-800 leading-snug">
                     {selectedProduct.name}
                   </h2>
 
                   <p className="text-xl font-extrabold text-yellow-600">
                     ₦{Number(selectedProduct.price).toLocaleString()}
                   </p>
-
-                  {/* Removed duplicate name under price */}
 
                   <div className="flex gap-3 mt-auto">
                     <button
