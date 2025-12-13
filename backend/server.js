@@ -226,17 +226,25 @@ app.get("/api/products", async (req, res) => {
 
 
 // --- ADD PRODUCT WITH SUPABASE IMAGE ---
-app.post("/api/products", upload.single("image"), async (req, res) => {
+app.post("/api/products", upload.array("images", 3), async (req, res) => {
   try {
     const { name, price, category } = req.body;
 
-    // Upload to Supabase
-    const imageUrl = await uploadToSupabase(req.file, "products");
+    let image1 = "";
+    let image2 = "";
+    let image3 = "";
+
+    if (req.files?.length) {
+      if (req.files[0]) image1 = await uploadToSupabase(req.files[0], "products");
+      if (req.files[1]) image2 = await uploadToSupabase(req.files[1], "products");
+      if (req.files[2]) image3 = await uploadToSupabase(req.files[2], "products");
+    }
 
     const result = await pool.query(
-      `INSERT INTO products (name, price, category, image)
-       VALUES ($1,$2,$3,$4) RETURNING *`,
-      [name, price, category, imageUrl]
+      `INSERT INTO products (name, price, category, image1, image2, image3)
+       VALUES ($1,$2,$3,$4,$5,$6)
+       RETURNING *`,
+      [name, price, category, image1, image2, image3]
     );
 
     res.json(result.rows[0]);
@@ -248,29 +256,35 @@ app.post("/api/products", upload.single("image"), async (req, res) => {
 });
 
 
+
 // --- UPDATE PRODUCT WITH OPTIONAL NEW IMAGE ---
-app.put("/api/products/:id", upload.single("image"), async (req, res) => {
+app.put("/api/products/:id", upload.array("images", 3), async (req, res) => {
   try {
     const { name, price, category } = req.body;
 
-    const existing = await pool.query("SELECT * FROM products WHERE id=$1", [
-      req.params.id,
-    ]);
+    const existing = await pool.query(
+      "SELECT * FROM products WHERE id=$1",
+      [req.params.id]
+    );
 
     if (!existing.rows.length)
       return res.status(404).json({ message: "Product not found" });
 
-    let imageUrl = existing.rows[0].image;
+    let { image1, image2, image3 } = existing.rows[0];
 
-    // If new file uploaded → replace the image
-    if (req.file) {
-      imageUrl = await uploadToSupabase(req.file, "products");
+    if (req.files?.length) {
+      if (req.files[0]) image1 = await uploadToSupabase(req.files[0], "products");
+      if (req.files[1]) image2 = await uploadToSupabase(req.files[1], "products");
+      if (req.files[2]) image3 = await uploadToSupabase(req.files[2], "products");
     }
 
     const result = await pool.query(
-      `UPDATE products SET name=$1, price=$2, category=$3, image=$4 
-       WHERE id=$5 RETURNING *`,
-      [name, price, category, imageUrl, req.params.id]
+      `UPDATE products
+       SET name=$1, price=$2, category=$3,
+           image1=$4, image2=$5, image3=$6
+       WHERE id=$7
+       RETURNING *`,
+      [name, price, category, image1, image2, image3, req.params.id]
     );
 
     res.json(result.rows[0]);
@@ -280,7 +294,6 @@ app.put("/api/products/:id", upload.single("image"), async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
-
 
 // --- DELETE PRODUCT ---
 app.delete("/api/products/:id", async (req, res) => {
