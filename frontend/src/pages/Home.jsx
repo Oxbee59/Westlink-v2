@@ -2,13 +2,14 @@ import React, { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
-import santaDecor from "../assets/santa_decor.png"; // place uploaded image here
+import santaDecor from "../assets/santa_decor.png";
 
 export default function Home() {
   const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [activeCategory, setActiveCategory] = useState("All");
+  const [activeImage, setActiveImage] = useState(0);
 
   const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
 
@@ -39,118 +40,139 @@ export default function Home() {
             activeCategory.toLowerCase()
         );
 
+  const getImages = (product) =>
+    [product.image1, product.image2, product.image3].filter(Boolean);
+
   return (
     <div className="bg-[#111] min-h-screen text-white py-6">
-      {/* TOP CHRISTMAS BANNER */}
+      {/* CHRISTMAS BANNER */}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl overflow-hidden mb-6 p-4 flex items-center gap-4">
+        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-6 p-4 flex gap-4 items-center">
           <img
             src={santaDecor}
             alt="Santa"
-            className="w-20 h-20 object-contain hidden sm:block transform animate-bounce"
+            className="w-20 h-20 hidden sm:block animate-bounce"
           />
-          <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-bold">WESTLINK Supermarket</h1>
-            <p className="mt-1 text-sm sm:text-base">
-              Your home away from home — this Christmas enjoy love, joy and great savings!
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold">
+              WESTLINK Supermarket
+            </h1>
+            <p className="text-sm sm:text-base mt-1">
+              Enjoy love, joy and great savings this Christmas 🎄
             </p>
-            <div className="mt-2 inline-block bg-white/20 px-3 py-1 rounded">
-              <span className="font-semibold">🎄 Christmas Special:</span> Get{" "}
-              <span className="font-bold">10% OFF</span> storewide (auto-applied at checkout).
-            </div>
           </div>
         </div>
 
-        {/* CATEGORY selector */}
+        {/* CATEGORIES */}
         <div className="flex flex-wrap justify-center gap-3 mb-6">
-          {categories.map((category) => (
+          {categories.map((cat) => (
             <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`px-3 sm:px-4 py-2 rounded-full font-semibold text-sm sm:text-base transition-all ${
-                activeCategory === category
-                  ? "bg-yellow-500 text-black shadow-lg"
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={`px-4 py-2 rounded-full font-semibold transition ${
+                activeCategory === cat
+                  ? "bg-yellow-500 text-black"
                   : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
-              {category}
+              {cat}
             </button>
           ))}
         </div>
 
-        {/* Product grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
+        {/* PRODUCT GRID */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} className="relative">
-              {/* clicking the card opens modal */}
-              <div onClick={() => setSelectedProduct(product)}>
-                <ProductCard
-                  id={product.id}
-                  name={product.name}
-                  price={product.price}
-                  image={product.image?.startsWith("http") ? product.image : `${API}${product.image}`}
-                />
-              </div>
+            <div key={product.id} onClick={() => {
+              setSelectedProduct(product);
+              setActiveImage(0);
+            }}>
+              <ProductCard
+                id={product.id}
+                name={product.name}
+                price={product.price}
+                image={
+                  product.image1?.startsWith("http")
+                    ? product.image1
+                    : `${API}${product.image1}`
+                }
+              />
+              <p className="text-xs text-center text-gray-400 mt-1">
+                Tap to view images
+              </p>
             </div>
           ))}
         </div>
-
-        {filteredProducts.length === 0 && (
-          <p className="text-center text-gray-400 col-span-full mt-10">No products found in this category.</p>
-        )}
       </div>
 
-      {/* Product modal preview */}
+      {/* PRODUCT MODAL */}
       <AnimatePresence>
         {selectedProduct && (
           <motion.div
-            key="modal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="absolute inset-0 bg-black/60"
+              className="absolute inset-0 bg-black/70"
               onClick={() => setSelectedProduct(null)}
             />
+
             <motion.div
-              layout
-              initial={{ y: 30, scale: 0.98 }}
-              animate={{ y: 0, scale: 1 }}
-              exit={{ y: 20, scale: 0.98 }}
-              transition={{ type: "spring", stiffness: 300, damping: 25 }}
-              className="relative bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden z-50"
+              initial={{ scale: 0.95 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.95 }}
+              className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden z-50"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2">
-                <div className="p-4 bg-gray-100 flex items-center justify-center">
+              <div className="grid md:grid-cols-2">
+                {/* IMAGE VIEWER */}
+                <div className="bg-gray-100 p-4">
                   <img
-                    src={selectedProduct.image?.startsWith("http") ? selectedProduct.image : `${API}${selectedProduct.image}`}
-                    alt={selectedProduct.name}
-                    className="max-h-96 w-full object-contain"
+                    src={
+                      getImages(selectedProduct)[activeImage]?.startsWith("http")
+                        ? getImages(selectedProduct)[activeImage]
+                        : `${API}${getImages(selectedProduct)[activeImage]}`
+                    }
+                    className="w-full h-80 object-contain"
+                    alt=""
                   />
+
+                  {/* THUMBNAILS */}
+                  <div className="flex gap-2 justify-center mt-3">
+                    {getImages(selectedProduct).map((img, idx) => (
+                      <img
+                        key={idx}
+                        src={img.startsWith("http") ? img : `${API}${img}`}
+                        onClick={() => setActiveImage(idx)}
+                        className={`w-14 h-14 object-cover rounded cursor-pointer border ${
+                          activeImage === idx
+                            ? "border-yellow-500"
+                            : "border-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </div>
 
+                {/* DETAILS */}
                 <div className="p-6 flex flex-col gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-gray-800">{selectedProduct.name}</h2>
-                    <p className="text-gray-600 mt-1">{selectedProduct.category || "Miscellaneous"}</p>
-                  </div>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    {selectedProduct.name}
+                  </h2>
 
-                  <div className="flex-1">
-                    <p className="text-xl font-extrabold text-yellow-600">₦{Number(selectedProduct.price).toLocaleString()}</p>
-                    {/* placeholder for description if available */}
-                    <p className="mt-3 text-gray-700">
-                  
-                    </p>
-                  </div>
+                  <p className="text-xl font-extrabold text-yellow-600">
+                    ₦{Number(selectedProduct.price).toLocaleString()}
+                  </p>
 
-                  <div className="flex gap-3">
+                  <p className="text-gray-700">
+                    {selectedProduct.name}
+                  </p>
+
+                  <div className="flex gap-3 mt-auto">
                     <button
-                      onClick={() => {
-                        addToCart(selectedProduct);
-                      }}
-                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black font-semibold py-2 rounded-lg"
+                      onClick={() => addToCart(selectedProduct)}
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-2 rounded-lg font-semibold"
                     >
                       Add to Cart
                     </button>
