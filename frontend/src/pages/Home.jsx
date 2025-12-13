@@ -48,15 +48,15 @@ export default function Home() {
       {/* WRAPPER */}
       <div className="max-w-6xl mx-auto px-4">
         {/* CHRISTMAS BANNER */}
-        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-6 p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-center text-center sm:text-left shadow-lg">
+        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-4 p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center text-center sm:text-left shadow-lg">
           <img
             src={santaDecor}
             alt="Santa decoration"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain animate-bounce"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain sm:object-contain animate-bounce flex-shrink-0"
           />
 
           <div className="flex-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-wide">
+            <h1 className="text-xl sm:text-2xl font-extrabold tracking-wide">
               WESTLINK Supermarket
             </h1>
 
@@ -65,7 +65,7 @@ export default function Home() {
               and festive savings for your family.
             </p>
 
-            <div className="inline-block mt-3 bg-white/20 backdrop-blur px-4 py-2 rounded-full text-sm sm:text-base font-semibold">
+            <div className="inline-block mt-2 sm:mt-3 bg-white/20 backdrop-blur px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-semibold">
               🎄 Christmas Offer:{" "}
               <span className="font-extrabold text-yellow-200">
                 10% OFF all items
@@ -179,9 +179,7 @@ export default function Home() {
                     ₦{Number(selectedProduct.price).toLocaleString()}
                   </p>
 
-                  <p className="text-gray-700">
-                    {selectedProduct.name}
-                  </p>
+                  {/* Removed duplicate name under price */}
 
                   <div className="flex gap-3 mt-auto">
                     <button
