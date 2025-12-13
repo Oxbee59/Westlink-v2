@@ -472,3 +472,11 @@ app.delete("/api/orders/:id", async (req, res) => {
 // ---------- START ----------
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT} with PostgreSQL`));
+
+app.get("/", (req, res) => {
+  res.status(200).send("Westlink Backend is running 🚀");
+});
+
+app.get("/health", (req, res) => {
+  res.status(200).json({ status: "ok" });
+});
