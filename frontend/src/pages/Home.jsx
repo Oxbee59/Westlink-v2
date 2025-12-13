@@ -45,21 +45,32 @@ export default function Home() {
 
   return (
     <div className="bg-[#111] min-h-screen text-white py-6">
-      {/* CHRISTMAS BANNER */}
+      {/* WRAPPER */}
       <div className="max-w-6xl mx-auto px-4">
-        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-6 p-4 flex gap-4 items-center">
+        {/* CHRISTMAS BANNER */}
+        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-6 p-4 sm:p-6 flex flex-col sm:flex-row gap-4 items-center text-center sm:text-left shadow-lg">
           <img
             src={santaDecor}
-            alt="Santa"
-            className="w-20 h-20 hidden sm:block animate-bounce"
+            alt="Santa decoration"
+            className="w-16 h-16 sm:w-20 sm:h-20 object-contain animate-bounce"
           />
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">
+
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-wide">
               WESTLINK Supermarket
             </h1>
-            <p className="text-sm sm:text-base mt-1">
-              Enjoy love, joy and great savings this Christmas 🎄
+
+            <p className="text-sm sm:text-base mt-1 opacity-95">
+              Celebrate Christmas with quality groceries, household essentials,
+              and festive savings for your family.
             </p>
+
+            <div className="inline-block mt-3 bg-white/20 backdrop-blur px-4 py-2 rounded-full text-sm sm:text-base font-semibold">
+              🎄 Christmas Offer:{" "}
+              <span className="font-extrabold text-yellow-200">
+                10% OFF all items
+              </span>
+            </div>
           </div>
         </div>
 
@@ -83,10 +94,13 @@ export default function Home() {
         {/* PRODUCT GRID */}
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
-            <div key={product.id} onClick={() => {
-              setSelectedProduct(product);
-              setActiveImage(0);
-            }}>
+            <div
+              key={product.id}
+              onClick={() => {
+                setSelectedProduct(product);
+                setActiveImage(0);
+              }}
+            >
               <ProductCard
                 id={product.id}
                 name={product.name}
@@ -135,10 +149,9 @@ export default function Home() {
                         : `${API}${getImages(selectedProduct)[activeImage]}`
                     }
                     className="w-full h-80 object-contain"
-                    alt=""
+                    alt={selectedProduct.name}
                   />
 
-                  {/* THUMBNAILS */}
                   <div className="flex gap-2 justify-center mt-3">
                     {getImages(selectedProduct).map((img, idx) => (
                       <img
@@ -150,6 +163,7 @@ export default function Home() {
                             ? "border-yellow-500"
                             : "border-gray-300"
                         }`}
+                        alt=""
                       />
                     ))}
                   </div>
