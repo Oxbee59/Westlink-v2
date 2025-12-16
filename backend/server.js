@@ -1,7 +1,7 @@
 // server.js
 import express from "express";
 import cors from "cors";
-
+import PDFDocument from "pdfkit";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import path from "path";
@@ -395,10 +395,30 @@ app.post("/api/orders", async (req, res) => {
 // GET ALL ORDERS (Admin)
 app.get("/api/orders", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT * FROM orders ORDER BY id DESC"
-    );
-    res.json(result.rows);
+    const result = await pool.query(`
+      SELECT 
+        id,
+        user_id,
+        full_name,
+        phone,
+        delivery_address,
+        products,
+        total_price,
+        status,
+        created_at
+      FROM orders
+      ORDER BY id DESC
+    `);
+
+    // Ensure products is always valid JSON
+    const orders = result.rows.map(order => ({
+      ...order,
+      products: typeof order.products === "string"
+        ? JSON.parse(order.products)
+        : order.products
+    }));
+
+    res.json(orders);
   } catch (err) {
     console.error(`[${new Date().toISOString()}] Get all orders error:`, err);
     res.status(500).json({ message: "Server error" });
@@ -415,17 +435,13 @@ app.put("/api/orders/:id", async (req, res) => {
       [status, req.params.id]
     );
 
-    if (result.rows.length === 0) {
+    if (!result.rows.length) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    console.log(
-      `[${new Date().toISOString()}] Order updated ID: ${req.params.id}`
-    );
-
     res.json(result.rows[0]);
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Update order error:`, err);
+    console.error("Update order error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
@@ -438,20 +454,18 @@ app.delete("/api/orders/:id", async (req, res) => {
       [req.params.id]
     );
 
-    if (result.rows.length === 0) {
+    if (!result.rows.length) {
       return res.status(404).json({ message: "Order not found" });
     }
 
-    console.log(
-      `[${new Date().toISOString()}] Order deleted ID: ${req.params.id}`
-    );
-
     res.json({ message: "Order deleted" });
   } catch (err) {
-    console.error(`[${new Date().toISOString()}] Delete order error:`, err);
+    console.error("Delete order error:", err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+
 
 
 app.get("/api/orders/user/:userId", async (req, res) => {
@@ -527,6 +541,43 @@ app.delete("/api/orders/:id", async (req, res) => {
   }
 });
 
+app.get("/api/orders/:id/invoice", async (req, res) => {
+  const { rows } = await pool.query("SELECT * FROM orders WHERE id=$1", [req.params.id]);
+  if (!rows.length) return res.status(404).send("Order not found");
+
+  const order = rows[0];
+  const products = JSON.parse(order.products);
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `attachment; filename=invoice-${order.id}.pdf`);
+
+  const doc = new PDFDocument({ margin: 50 });
+  doc.pipe(res);
+
+  doc.fontSize(20).text("WESTLINK SUPERMARKET", { align: "center" });
+  doc.text("New Owerri, Imo State, Nigeria", { align: "center" });
+  doc.moveDown();
+
+  doc.fontSize(14).text(`Invoice #: ${order.id}`);
+  doc.text(`Customer: ${order.full_name}`);
+  doc.text(`Phone: ${order.phone}`);
+  doc.text(`Address: ${order.delivery_address}`);
+  doc.text(`Status: ${order.status}`);
+  doc.moveDown();
+
+  doc.text("Products:");
+  products.forEach(p => {
+    doc.text(`- ${p.name} × ${p.quantity} @ ₦${p.price}`);
+  });
+
+  doc.moveDown();
+  doc.fontSize(16).text(`TOTAL: ₦${order.total_price}`, { align: "right" });
+
+  doc.moveDown(2);
+  doc.fontSize(10).text("Thank you for shopping with Westlink.", { align: "center" });
+
+  doc.end();
+});
 
 // ---------- START ----------
 const PORT = process.env.PORT || 5000;
