@@ -162,6 +162,10 @@ export default function Admin() {
     }
   };
 
+  const handleDownloadInvoice = (orderId) => {
+    window.open(`${API}/api/orders/${orderId}/invoice`, "_blank");
+  };
+
   const formatNumber = (num) => {
     const n = typeof num === "number" ? num : Number(num);
     return !isNaN(n) ? n.toLocaleString() : "0";
@@ -169,18 +173,108 @@ export default function Admin() {
 
   // ---------------- UI ----------------
   return (
-    <div className="bg-gray-100 min-h-screen p-6">
+    <div className="bg-gray-100 min-h-screen p-4 md:p-6">
+      {/* ================= PRODUCTS ================= */}
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-xl font-bold mb-4">Manage Products</h2>
+        <form onSubmit={handleSubmit} className="mb-4 grid gap-4 md:grid-cols-3">
+          <input
+            type="text"
+            placeholder="Product Name"
+            value={form.name}
+            onChange={(e) => setForm({ ...form, name: e.target.value })}
+            className="border p-2 rounded"
+            required
+          />
+          <input
+            type="number"
+            placeholder="Price"
+            value={form.price}
+            onChange={(e) => setForm({ ...form, price: e.target.value })}
+            className="border p-2 rounded"
+            required
+          />
+          <input
+            type="text"
+            placeholder="Category"
+            value={form.category}
+            onChange={(e) => setForm({ ...form, category: e.target.value })}
+            className="border p-2 rounded"
+          />
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileChange}
+            className="border p-2 rounded col-span-full md:col-span-1"
+          />
+          <div className="flex gap-2 col-span-full md:col-span-2 flex-wrap">
+            {previews.map((src, i) => (
+              <img key={i} src={src} alt="" className="h-16 w-16 object-cover rounded" />
+            ))}
+          </div>
+          <button
+            type="submit"
+            className="bg-purple-600 text-white px-4 py-2 rounded col-span-full md:col-span-1"
+          >
+            {editing ? "Update Product" : "Add Product"}
+          </button>
+        </form>
 
-      {/* PRODUCT FORM */}
-      {/* (UNCHANGED — omitted here for brevity, already included above) */}
+        {/* PRODUCTS GRID */}
+        <div className="grid gap-4 md:grid-cols-3">
+          {products.map((p) => (
+            <div key={p.id} className="border p-2 rounded shadow flex flex-col">
+              <div className="flex gap-1 mb-2">
+                {[p.image1, p.image2, p.image3].filter(Boolean).map((img, i) => (
+                  <img key={i} src={img} alt="" className="h-20 w-20 object-cover rounded" />
+                ))}
+              </div>
+              <h3 className="font-semibold">{p.name}</h3>
+              <p>₦{formatNumber(p.price)}</p>
+              <p className="text-sm text-gray-500">{p.category}</p>
+              <div className="mt-auto flex gap-2">
+                <button
+                  onClick={() => handleEditProduct(p)}
+                  className="bg-blue-600 text-white px-2 py-1 rounded"
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDeleteProduct(p.id)}
+                  className="bg-red-600 text-white px-2 py-1 rounded"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* PRODUCT GRID */}
-      {/* (UNCHANGED — already included above) */}
+      {/* ================= ABOUT IMAGES ================= */}
+      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-6">
+        <h2 className="text-xl font-bold mb-4">About Images</h2>
+        <form onSubmit={handleAboutUpload} className="flex gap-2 flex-wrap mb-4">
+          <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files[0])} />
+          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded">Upload</button>
+        </form>
+        <div className="flex gap-2 flex-wrap">
+          {aboutImages.map((img) => (
+            <div key={img.id} className="relative">
+              <img src={img.image} alt="" className="h-24 w-24 object-cover rounded" />
+              <button
+                onClick={() => handleDeleteAboutImage(img.id)}
+                className="absolute top-0 right-0 bg-red-600 text-white px-1 rounded"
+              >
+                X
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
 
-      {/* ABOUT IMAGES */}
-      {/* (UNCHANGED — already included above) */}
-
-      {/* ORDERS SECTION */}
+      {/* ================= ORDERS ================= */}
       <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-10">
         <h2 className="text-xl font-bold mb-4">Customer Orders</h2>
 
@@ -195,6 +289,7 @@ export default function Admin() {
                   <th className="border p-2">Customer</th>
                   <th className="border p-2">Phone</th>
                   <th className="border p-2">Address</th>
+                  <th className="border p-2">Products</th>
                   <th className="border p-2">Total (₦)</th>
                   <th className="border p-2">Status</th>
                   <th className="border p-2">Actions</th>
@@ -207,26 +302,35 @@ export default function Admin() {
                     <td className="border p-2">{order.full_name}</td>
                     <td className="border p-2">{order.phone}</td>
                     <td className="border p-2">{order.delivery_address}</td>
-                    <td className="border p-2 font-semibold">
-                      ₦{formatNumber(order.total_price)}
+                    <td className="border p-2 text-left">
+                      {order.products.map((p, i) => (
+                        <div key={i}>
+                          {p.name} × {p.quantity} @ ₦{formatNumber(p.price)}
+                        </div>
+                      ))}
                     </td>
-                    <td className="border p-2 capitalize">
-                      {order.status || "pending"}
-                    </td>
-                    <td className="border p-2 flex gap-2 justify-center">
+                    <td className="border p-2 font-semibold">₦{formatNumber(order.total_price)}</td>
+                    <td className="border p-2 capitalize">{order.status || "pending"}</td>
+                    <td className="border p-2 flex gap-1 justify-center flex-wrap">
                       {order.status !== "completed" && (
                         <button
                           onClick={() => handleCompleteOrder(order.id)}
-                          className="bg-green-600 text-white px-3 py-1 rounded"
+                          className="bg-green-600 text-white px-2 py-1 rounded"
                         >
                           Complete
                         </button>
                       )}
                       <button
                         onClick={() => handleDeleteOrder(order.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded"
+                        className="bg-red-600 text-white px-2 py-1 rounded"
                       >
                         Delete
+                      </button>
+                      <button
+                        onClick={() => handleDownloadInvoice(order.id)}
+                        className="bg-blue-600 text-white px-2 py-1 rounded"
+                      >
+                        Download Invoice
                       </button>
                     </td>
                   </tr>
