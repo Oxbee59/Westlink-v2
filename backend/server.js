@@ -351,29 +351,53 @@ app.post("/api/cart", async (req, res) => {
 });
 
 // ---------- ORDERS ----------
+
+// CREATE ORDER (User)
 app.post("/api/orders", async (req, res) => {
   try {
     const { userId, fullName, phone, deliveryAddress, products } = req.body;
 
-    const total = products.reduce((sum, p) => sum + p.price * p.quantity, 0);
+    if (!products || products.length === 0) {
+      return res.status(400).json({ message: "No products in order" });
+    }
+
+    const total = products.reduce(
+      (sum, p) => sum + Number(p.price) * Number(p.quantity),
+      0
+    );
 
     const result = await pool.query(
-      `INSERT INTO orders (user_id, full_name, phone, delivery_address, products, total_price)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [userId, fullName, phone, deliveryAddress, JSON.stringify(products), total]
+      `INSERT INTO orders 
+       (user_id, full_name, phone, delivery_address, products, total_price, status)
+       VALUES ($1,$2,$3,$4,$5,$6,'pending')
+       RETURNING *`,
+      [
+        userId,
+        fullName,
+        phone,
+        deliveryAddress,
+        JSON.stringify(products),
+        total,
+      ]
+    );
+
+    console.log(
+      `[${new Date().toISOString()}] Order placed by user ID: ${userId}`
     );
 
     res.json({ message: "Order placed", order: result.rows[0] });
-    console.log(`[${new Date().toISOString()}] Order placed by user ID: ${userId}`);
   } catch (err) {
     console.error(`[${new Date().toISOString()}] Place order error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
 
+// GET ALL ORDERS (Admin)
 app.get("/api/orders", async (req, res) => {
   try {
-    const result = await pool.query("SELECT * FROM orders ORDER BY id DESC");
+    const result = await pool.query(
+      "SELECT * FROM orders ORDER BY id DESC"
+    );
     res.json(result.rows);
   } catch (err) {
     console.error(`[${new Date().toISOString()}] Get all orders error:`, err);
@@ -381,19 +405,54 @@ app.get("/api/orders", async (req, res) => {
   }
 });
 
+// UPDATE ORDER STATUS (Admin)
 app.put("/api/orders/:id", async (req, res) => {
   try {
+    const { status } = req.body;
+
     const result = await pool.query(
       "UPDATE orders SET status=$1 WHERE id=$2 RETURNING *",
-      [req.body.status, req.params.id]
+      [status, req.params.id]
     );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] Order updated ID: ${req.params.id}`
+    );
+
     res.json(result.rows[0]);
-    console.log(`[${new Date().toISOString()}] Order updated ID: ${req.params.id}`);
   } catch (err) {
     console.error(`[${new Date().toISOString()}] Update order error:`, err);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+// DELETE ORDER (Admin)
+app.delete("/api/orders/:id", async (req, res) => {
+  try {
+    const result = await pool.query(
+      "DELETE FROM orders WHERE id=$1 RETURNING *",
+      [req.params.id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] Order deleted ID: ${req.params.id}`
+    );
+
+    res.json({ message: "Order deleted" });
+  } catch (err) {
+    console.error(`[${new Date().toISOString()}] Delete order error:`, err);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
 
 app.get("/api/orders/user/:userId", async (req, res) => {
   try {
