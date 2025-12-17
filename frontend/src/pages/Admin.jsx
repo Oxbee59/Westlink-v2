@@ -143,8 +143,23 @@ export default function Admin() {
     fetchOrders();
   };
 
-  const downloadInvoice = (id) => {
-    window.open(`${API}/api/orders/${id}/invoice`, "_blank");
+  const downloadInvoice = async (id) => {
+    try {
+      const res = await fetch(`${API}/api/orders/${id}/invoice`);
+      if (!res.ok) throw new Error("Invoice download failed");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Westlink-Invoice-${id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to download invoice");
+    }
   };
 
   /* ================= UI ================= */
@@ -180,7 +195,22 @@ export default function Admin() {
               <option key={c}>{c}</option>
             ))}
           </select>
-          <input type="file" multiple onChange={handleFileChange} />
+          <input type="file" multiple accept="image/*" onChange={handleFileChange} />
+
+          {/* IMAGE PREVIEW */}
+          {previews.length > 0 && (
+            <div className="flex gap-2 mt-2 flex-wrap col-span-full">
+              {previews.map((src, i) => (
+                <img
+                  key={i}
+                  src={src}
+                  alt="preview"
+                  className="h-20 w-20 object-cover rounded border"
+                />
+              ))}
+            </div>
+          )}
+
           <button className="bg-green-600 text-white px-4 py-2 rounded col-span-full">
             {editing ? "Update Product" : "Add Product"}
           </button>
