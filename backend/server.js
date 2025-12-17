@@ -530,42 +530,69 @@ app.delete("/api/about-images/:id", async (req, res) => {
 
 
 app.get("/api/orders/:id/invoice", async (req, res) => {
-  const { rows } = await pool.query("SELECT * FROM orders WHERE id=$1", [req.params.id]);
-  if (!rows.length) return res.status(404).send("Order not found");
+  try {
+    const { id } = req.params;
 
-  const order = rows[0];
-  const products = JSON.parse(order.products);
+    const result = await pool.query(
+      "SELECT * FROM orders WHERE id=$1",
+      [id]
+    );
 
-  res.setHeader("Content-Type", "application/pdf");
-  res.setHeader("Content-Disposition", `attachment; filename=invoice-${order.id}.pdf`);
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "Order not found" });
+    }
 
-  const doc = new PDFDocument({ margin: 50 });
-  doc.pipe(res);
+    const order = result.rows[0];
 
-  doc.fontSize(20).text("WESTLINK SUPERMARKET", { align: "center" });
-  doc.text("New Owerri, Imo State, Nigeria", { align: "center" });
-  doc.moveDown();
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=Westlink-Invoice-${id}.pdf`
+    );
 
-  doc.fontSize(14).text(`Invoice #: ${order.id}`);
-  doc.text(`Customer: ${order.full_name}`);
-  doc.text(`Phone: ${order.phone}`);
-  doc.text(`Address: ${order.delivery_address}`);
-  doc.text(`Status: ${order.status}`);
-  doc.moveDown();
+    const PDFDocument = (await import("pdfkit")).default;
+    const doc = new PDFDocument({ margin: 50 });
 
-  doc.text("Products:");
-  products.forEach(p => {
-    doc.text(`- ${p.name} × ${p.quantity} @ ₦${p.price}`);
-  });
+    doc.pipe(res);
 
-  doc.moveDown();
-  doc.fontSize(16).text(`TOTAL: ₦${order.total_price}`, { align: "right" });
+    doc.fontSize(20).text("WESTLINK SUPERMARKET", { align: "center" });
+    doc.moveDown();
+    doc.fontSize(12).text(`Invoice #: ${order.id}`);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`);
+    doc.text(`Customer: ${order.full_name}`);
+    doc.text(`Phone: ${order.phone}`);
+    doc.moveDown();
 
-  doc.moveDown(2);
-  doc.fontSize(10).text("Thank you for shopping with Westlink.", { align: "center" });
+    const products =
+      typeof order.products === "string"
+        ? JSON.parse(order.products)
+        : order.products;
 
-  doc.end();
+    products.forEach((p, i) => {
+      doc.text(
+        `${i + 1}. ${p.name} × ${p.quantity} — ₦${Number(p.price).toLocaleString()}`
+      );
+    });
+
+    doc.moveDown();
+    doc.fontSize(14).text(
+      `TOTAL: ₦${Number(order.total_price).toLocaleString()}`,
+      { align: "right" }
+    );
+
+    doc.moveDown();
+    doc.fontSize(10).text(
+      "Thank you for shopping with Westlink Supermarket.",
+      { align: "center" }
+    );
+
+    doc.end();
+  } catch (err) {
+    console.error("Invoice error:", err);
+    res.status(500).end();
+  }
 });
+
 
 // ---------- START ----------
 const PORT = process.env.PORT || 5000;
