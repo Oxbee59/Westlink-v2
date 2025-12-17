@@ -1,273 +1,239 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 export default function Admin() {
+  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+  /* ================= STATE ================= */
   const [products, setProducts] = useState([]);
-  const [form, setForm] = useState({ name: "", price: "", images: [], category: "" });
-  const [previews, setPreviews] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [aboutImages, setAboutImages] = useState([]);
+
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [editing, setEditing] = useState(null);
 
-  const [aboutImages, setAboutImages] = useState([]);
-  const [selectedFile, setSelectedFile] = useState(null);
+  const [form, setForm] = useState({
+    name: "",
+    price: "",
+    category: "",
+    images: [],
+  });
 
-  const [orders, setOrders] = useState([]);
+  const [previews, setPreviews] = useState([]);
+  const [aboutFile, setAboutFile] = useState(null);
 
-  const API = import.meta.env.VITE_API_URL || "https://westlink-backend.onrender.com";
+  /* ================= CATEGORIES ================= */
+  const categories = [
+    "All",
+    "Babies Corner",
+    "Wines & Alcohol",
+    "Beverages",
+    "Lotions & Body Care",
+    "Cooking Essentials",
+    "Cooking Utensils",
+    "Other Materials",
+  ];
 
-  // ---------------- FETCH DATA ----------------
+  /* ================= FETCH ================= */
+  useEffect(() => {
+    fetchProducts();
+    fetchOrders();
+    fetchAboutImages();
+  }, []);
+
   const fetchProducts = async () => {
-    try {
-      const res = await fetch(`${API}/api/products`);
-      const data = await res.json();
-      setProducts(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Fetch products error:", err);
-    }
-  };
-
-  const fetchAboutImages = async () => {
-    try {
-      const res = await fetch(`${API}/api/about-images`);
-      const data = await res.json();
-      setAboutImages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Fetch about-images error:", err);
-    }
+    const res = await fetch(`${API}/api/products`);
+    const data = await res.json();
+    setProducts(Array.isArray(data) ? data : []);
   };
 
   const fetchOrders = async () => {
-    try {
-      const res = await fetch(`${API}/api/orders`);
-      const data = await res.json();
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error("Fetch orders error:", err);
-    }
+    const res = await fetch(`${API}/api/orders`);
+    const data = await res.json();
+    setOrders(Array.isArray(data) ? data : []);
   };
 
-  useEffect(() => {
-    fetchProducts();
-    fetchAboutImages();
-    fetchOrders();
-  }, []);
+  const fetchAboutImages = async () => {
+    const res = await fetch(`${API}/api/about-images`);
+    const data = await res.json();
+    setAboutImages(Array.isArray(data) ? data : []);
+  };
 
-  // ---------------- HANDLE PRODUCT FORM ----------------
+  /* ================= HELPERS ================= */
+  const formatNumber = (n) =>
+    !isNaN(Number(n)) ? Number(n).toLocaleString() : "0";
+
+  /* ================= PRODUCTS ================= */
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files).slice(0, 3);
     setForm({ ...form, images: files });
     setPreviews(files.map((f) => URL.createObjectURL(f)));
   };
 
+  const handleSubmitProduct = async (e) => {
+    e.preventDefault();
+
+    const fd = new FormData();
+    fd.append("name", form.name);
+    fd.append("price", form.price);
+    fd.append("category", form.category);
+    form.images.forEach((img) => fd.append("images", img));
+
+    const url = editing
+      ? `${API}/api/products/${editing}`
+      : `${API}/api/products`;
+
+    await fetch(url, { method: editing ? "PUT" : "POST", body: fd });
+
+    resetForm();
+    fetchProducts();
+  };
+
   const resetForm = () => {
-    setForm({ name: "", price: "", images: [], category: "" });
+    setForm({ name: "", price: "", category: "", images: [] });
     setEditing(null);
     setPreviews([]);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    formData.append("name", form.name);
-    formData.append("price", form.price);
-    formData.append("category", form.category);
-
-    form.images.forEach((img) => formData.append("images", img));
-
-    const url = editing ? `${API}/api/products/${editing}` : `${API}/api/products`;
-    const method = editing ? "PUT" : "POST";
-
-    try {
-      await fetch(url, { method, body: formData });
-      resetForm();
-      fetchProducts();
-    } catch (err) {
-      console.error("Product submit error:", err);
-    }
+  const editProduct = (p) => {
+    setEditing(p.id);
+    setForm({ name: p.name, price: p.price, category: p.category, images: [] });
+    setPreviews([p.image1, p.image2, p.image3].filter(Boolean));
   };
 
-  const handleEditProduct = (product) => {
-    setForm({
-      name: product.name,
-      price: product.price,
-      images: [],
-      category: product.category || "",
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Delete product?")) return;
+    await fetch(`${API}/api/products/${id}`, { method: "DELETE" });
+    fetchProducts();
+  };
+
+  const filteredProducts =
+    selectedCategory === "All"
+      ? products
+      : products.filter((p) => p.category === selectedCategory);
+
+  /* ================= ABOUT ================= */
+  const uploadAboutImage = async () => {
+    if (!aboutFile) return alert("Select image");
+    const fd = new FormData();
+    fd.append("image", aboutFile);
+    await fetch(`${API}/api/about-images`, { method: "POST", body: fd });
+    setAboutFile(null);
+    fetchAboutImages();
+  };
+
+  const deleteAboutImage = async (id) => {
+    if (!window.confirm("Delete image?")) return;
+    await fetch(`${API}/api/about-images/${id}`, { method: "DELETE" });
+    fetchAboutImages();
+  };
+
+  /* ================= ORDERS ================= */
+  const completeOrder = async (id) => {
+    await fetch(`${API}/api/orders/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "completed" }),
     });
-
-    const imgs = [product.image1, product.image2, product.image3].filter(Boolean);
-    setPreviews(imgs);
-    setEditing(product.id);
+    fetchOrders();
   };
 
-  const handleDeleteProduct = async (id) => {
-    if (!window.confirm("Are you sure?")) return;
-    try {
-      await fetch(`${API}/api/products/${id}`, { method: "DELETE" });
-      fetchProducts();
-    } catch (err) {
-      console.error("Delete product error:", err);
-    }
+  const deleteOrder = async (id) => {
+    if (!window.confirm("Delete order?")) return;
+    await fetch(`${API}/api/orders/${id}`, { method: "DELETE" });
+    fetchOrders();
   };
 
-  // ---------------- ABOUT IMAGES ----------------
-  const handleAboutUpload = async (e) => {
-    e.preventDefault();
-    if (!selectedFile) return alert("Select an image");
-
-    const formData = new FormData();
-    formData.append("image", selectedFile);
-
-    try {
-      const res = await fetch(`${API}/api/about-images`, { method: "POST", body: formData });
-      const data = await res.json();
-      setAboutImages((prev) => [...prev, data]);
-      setSelectedFile(null);
-    } catch (err) {
-      console.error("About upload error:", err);
-    }
+  const downloadInvoice = (id) => {
+    window.open(`${API}/api/orders/${id}/invoice`, "_blank");
   };
 
-  const handleDeleteAboutImage = async (id) => {
-    if (!window.confirm("Delete this image?")) return;
-    try {
-      await fetch(`${API}/api/about-images/${id}`, { method: "DELETE" });
-      setAboutImages((p) => p.filter((img) => img.id !== id));
-    } catch (err) {
-      console.error("Delete about image error:", err);
-    }
-  };
-
-  // ---------------- ORDERS ----------------
-  const handleCompleteOrder = async (orderId) => {
-    if (!window.confirm("Mark this order as completed?")) return;
-    try {
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: "completed" } : o))
-      );
-      await fetch(`${API}/api/orders/${orderId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "completed" }),
-      });
-    } catch (err) {
-      console.error("Complete order error:", err);
-    }
-  };
-
-  const handleDeleteOrder = async (orderId) => {
-    if (!window.confirm("Delete this order?")) return;
-    try {
-      setOrders((prev) => prev.filter((o) => o.id !== orderId));
-      await fetch(`${API}/api/orders/${orderId}`, { method: "DELETE" });
-    } catch (err) {
-      console.error("Delete order error:", err);
-    }
-  };
-
-  const handleDownloadInvoice = (orderId) => {
-    window.open(`${API}/api/orders/${orderId}/invoice`, "_blank");
-  };
-
-  const formatNumber = (num) => {
-    const n = typeof num === "number" ? num : Number(num);
-    return !isNaN(n) ? n.toLocaleString() : "0";
-  };
-
-  // ---------------- UI ----------------
+  /* ================= UI ================= */
   return (
-    <div className="bg-gray-100 min-h-screen p-4 md:p-6">
-      {/* ================= PRODUCTS ================= */}
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl font-bold mb-4">Manage Products</h2>
-        <form onSubmit={handleSubmit} className="mb-4 grid gap-4 md:grid-cols-3">
+    <div className="p-6 bg-gray-100 min-h-screen space-y-10">
+
+      {/* ================= ADD PRODUCT ================= */}
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="font-bold text-lg mb-4">Add / Edit Product</h2>
+        <form onSubmit={handleSubmitProduct} className="grid md:grid-cols-4 gap-3">
           <input
-            type="text"
-            placeholder="Product Name"
+            placeholder="Name"
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="border p-2 rounded"
+            className="border p-2"
             required
           />
           <input
-            type="number"
             placeholder="Price"
             value={form.price}
             onChange={(e) => setForm({ ...form, price: e.target.value })}
-            className="border p-2 rounded"
+            className="border p-2"
             required
           />
-          <input
-            type="text"
-            placeholder="Category"
+          <select
             value={form.category}
             onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="border p-2 rounded"
-          />
-          <input
-            type="file"
-            multiple
-            accept="image/*"
-            onChange={handleFileChange}
-            className="border p-2 rounded col-span-full md:col-span-1"
-          />
-          <div className="flex gap-2 col-span-full md:col-span-2 flex-wrap">
-            {previews.map((src, i) => (
-              <img key={i} src={src} alt="" className="h-16 w-16 object-cover rounded" />
-            ))}
-          </div>
-          <button
-            type="submit"
-            className="bg-purple-600 text-white px-4 py-2 rounded col-span-full md:col-span-1"
+            className="border p-2"
+            required
           >
+            <option value="">Select Category</option>
+            {categories.slice(1).map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+          <input type="file" multiple onChange={handleFileChange} />
+          <button className="bg-green-600 text-white px-4 py-2 rounded col-span-full">
             {editing ? "Update Product" : "Add Product"}
           </button>
         </form>
+      </div>
 
-        {/* PRODUCTS GRID */}
-        <div className="grid gap-4 md:grid-cols-3">
-          {products.map((p) => (
-            <div key={p.id} className="border p-2 rounded shadow flex flex-col">
-              <div className="flex gap-1 mb-2">
-                {[p.image1, p.image2, p.image3].filter(Boolean).map((img, i) => (
-                  <img key={i} src={img} alt="" className="h-20 w-20 object-cover rounded" />
-                ))}
-              </div>
-              <h3 className="font-semibold">{p.name}</h3>
+      {/* ================= PRODUCT LIST ================= */}
+      <div className="bg-white p-6 rounded shadow">
+        <div className="flex justify-between mb-4">
+          <h2 className="font-bold">Products</h2>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="border p-2"
+          >
+            {categories.map((c) => (
+              <option key={c}>{c}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid md:grid-cols-3 gap-4">
+          {filteredProducts.map((p) => (
+            <div key={p.id} className="border p-3 rounded">
+              <img src={p.image1} className="h-40 w-full object-cover mb-2" />
+              <h3 className="font-bold">{p.name}</h3>
               <p>₦{formatNumber(p.price)}</p>
-              <p className="text-sm text-gray-500">{p.category}</p>
-              <div className="mt-auto flex gap-2">
-                <button
-                  onClick={() => handleEditProduct(p)}
-                  className="bg-blue-600 text-white px-2 py-1 rounded"
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleDeleteProduct(p.id)}
-                  className="bg-red-600 text-white px-2 py-1 rounded"
-                >
-                  Delete
-                </button>
+              <p className="text-sm">{p.category}</p>
+              <div className="flex gap-2 mt-2">
+                <button onClick={() => editProduct(p)} className="bg-blue-500 text-white px-2 rounded">Edit</button>
+                <button onClick={() => deleteProduct(p.id)} className="bg-red-500 text-white px-2 rounded">Delete</button>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ================= ABOUT IMAGES ================= */}
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-6">
-        <h2 className="text-xl font-bold mb-4">About Images</h2>
-        <form onSubmit={handleAboutUpload} className="flex gap-2 flex-wrap mb-4">
-          <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files[0])} />
-          <button type="submit" className="bg-purple-600 text-white px-4 py-2 rounded">Upload</button>
-        </form>
-        <div className="flex gap-2 flex-wrap">
+      {/* ================= ABOUT ================= */}
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="font-bold mb-3">About Images</h2>
+        <input type="file" onChange={(e) => setAboutFile(e.target.files[0])} />
+        <button onClick={uploadAboutImage} className="bg-green-600 text-white px-3 py-1 ml-2 rounded">
+          Upload
+        </button>
+        <div className="grid grid-cols-4 gap-3 mt-4">
           {aboutImages.map((img) => (
             <div key={img.id} className="relative">
-              <img src={img.image} alt="" className="h-24 w-24 object-cover rounded" />
+              <img src={img.image} className="h-24 w-full object-cover" />
               <button
-                onClick={() => handleDeleteAboutImage(img.id)}
-                className="absolute top-0 right-0 bg-red-600 text-white px-1 rounded"
+                onClick={() => deleteAboutImage(img.id)}
+                className="absolute top-1 right-1 bg-red-600 text-white px-2 rounded"
               >
-                X
+                ×
               </button>
             </div>
           ))}
@@ -275,62 +241,53 @@ export default function Admin() {
       </div>
 
       {/* ================= ORDERS ================= */}
-      <div className="max-w-6xl mx-auto bg-white p-6 rounded-lg shadow mb-10">
-        <h2 className="text-xl font-bold mb-4">Customer Orders</h2>
+      <div className="bg-white p-6 rounded shadow">
+        <h2 className="font-bold mb-4">Customer Orders</h2>
 
         {orders.length === 0 ? (
-          <p className="text-gray-500">No orders found.</p>
+          <p>No orders found.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full border text-sm">
               <thead className="bg-gray-200">
                 <tr>
-                  <th className="border p-2">ID</th>
-                  <th className="border p-2">Customer</th>
-                  <th className="border p-2">Phone</th>
-                  <th className="border p-2">Address</th>
-                  <th className="border p-2">Products</th>
-                  <th className="border p-2">Total (₦)</th>
-                  <th className="border p-2">Status</th>
-                  <th className="border p-2">Actions</th>
+                  <th>ID</th>
+                  <th>Customer</th>
+                  <th>Phone</th>
+                  <th>Address</th>
+                  <th>Products</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => (
-                  <tr key={order.id} className="text-center">
-                    <td className="border p-2">{order.id}</td>
-                    <td className="border p-2">{order.full_name}</td>
-                    <td className="border p-2">{order.phone}</td>
-                    <td className="border p-2">{order.delivery_address}</td>
-                    <td className="border p-2 text-left">
-                      {order.products.map((p, i) => (
+                {orders.map((o) => (
+                  <tr key={o.id} className="border text-center">
+                    <td>{o.id}</td>
+                    <td>{o.full_name}</td>
+                    <td>{o.phone}</td>
+                    <td>{o.delivery_address}</td>
+                    <td className="text-left">
+                      {o.products?.map((p, i) => (
                         <div key={i}>
                           {p.name} × {p.quantity} @ ₦{formatNumber(p.price)}
                         </div>
                       ))}
                     </td>
-                    <td className="border p-2 font-semibold">₦{formatNumber(order.total_price)}</td>
-                    <td className="border p-2 capitalize">{order.status || "pending"}</td>
-                    <td className="border p-2 flex gap-1 justify-center flex-wrap">
-                      {order.status !== "completed" && (
-                        <button
-                          onClick={() => handleCompleteOrder(order.id)}
-                          className="bg-green-600 text-white px-2 py-1 rounded"
-                        >
+                    <td>₦{formatNumber(o.total_price)}</td>
+                    <td>{o.status}</td>
+                    <td className="flex flex-wrap gap-1 justify-center">
+                      {o.status !== "completed" && (
+                        <button onClick={() => completeOrder(o.id)} className="bg-green-600 text-white px-2 rounded">
                           Complete
                         </button>
                       )}
-                      <button
-                        onClick={() => handleDeleteOrder(order.id)}
-                        className="bg-red-600 text-white px-2 py-1 rounded"
-                      >
+                      <button onClick={() => deleteOrder(o.id)} className="bg-red-600 text-white px-2 rounded">
                         Delete
                       </button>
-                      <button
-                        onClick={() => handleDownloadInvoice(order.id)}
-                        className="bg-blue-600 text-white px-2 py-1 rounded"
-                      >
-                        Download Invoice
+                      <button onClick={() => downloadInvoice(o.id)} className="bg-blue-600 text-white px-2 rounded">
+                        Invoice
                       </button>
                     </td>
                   </tr>
@@ -340,6 +297,7 @@ export default function Admin() {
           </div>
         )}
       </div>
+
     </div>
   );
 }
