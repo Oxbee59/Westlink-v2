@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import ProductCard from "../components/ProductCard";
 import { motion, AnimatePresence } from "framer-motion";
 import { useCart } from "../context/CartContext";
-import santaDecor from "../assets/santa_decor.png";
 
 export default function Home() {
   const { addToCart } = useCart();
@@ -46,31 +45,14 @@ export default function Home() {
   return (
     <div className="bg-[#111] min-h-screen text-white py-6">
       <div className="max-w-6xl mx-auto px-4">
-        {/* CHRISTMAS BANNER */}
-        <div className="relative bg-gradient-to-r from-red-700 via-red-600 to-yellow-500 rounded-xl mb-4 p-3 sm:p-4 flex flex-col sm:flex-row gap-3 sm:gap-4 items-center text-center sm:text-left shadow-lg">
-          <img
-            src={santaDecor}
-            alt="Santa decoration"
-            className="w-16 h-16 sm:w-20 sm:h-20 object-contain animate-bounce flex-shrink-0"
-          />
-
-          <div className="flex-1">
-            <h1 className="text-xl sm:text-2xl font-extrabold tracking-wide">
-              WESTLINK Supermarket
-            </h1>
-
-            <p className="text-sm sm:text-base mt-1 opacity-95">
-              Celebrate Christmas with quality groceries, household essentials,
-              and festive savings for your family.
-            </p>
-
-            <div className="inline-block mt-2 sm:mt-3 bg-white/20 backdrop-blur px-3 py-1 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-semibold">
-              🎄 Christmas Offer:{" "}
-              <span className="font-extrabold text-yellow-200">
-                10% OFF all items
-              </span>
-            </div>
-          </div>
+        {/* SIMPLE BANNER */}
+        <div className="bg-gray-900 rounded-lg mb-4 px-4 py-3 text-center shadow">
+          <h1 className="text-lg sm:text-xl font-bold tracking-wide">
+            WESTLINK Supermarket
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-300 mt-1">
+            Quality groceries and household essentials you can trust
+          </p>
         </div>
 
         {/* CATEGORIES */}
@@ -170,7 +152,6 @@ export default function Home() {
 
                 {/* DETAILS */}
                 <div className="p-6 flex flex-col gap-4">
-                  {/* 🔽 FONT SIZE REDUCED HERE ONLY */}
                   <h2 className="text-lg sm:text-xl font-bold text-gray-800 leading-snug">
                     {selectedProduct.name}
                   </h2>

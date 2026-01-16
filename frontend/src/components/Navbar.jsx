@@ -3,7 +3,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../context/CartContext";
 import { ShoppingCart, Menu, X } from "lucide-react";
 import logo from "../assets/westlink_logo.png";
-import santaHat from "../assets/santa_hat.png"; // save uploaded hat here
 
 export default function Navbar() {
   const { cartItems } = useCart();
@@ -28,19 +27,19 @@ export default function Navbar() {
       <nav className="bg-dark text-gold shadow-md">
         <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <button onClick={() => setMenuOpen(true)} className="text-gold focus:outline-none">
+            <button
+              onClick={() => setMenuOpen(true)}
+              className="text-gold focus:outline-none"
+            >
               <Menu size={24} />
             </button>
 
-            <Link to="/" className="flex items-center space-x-2 relative">
-              <div className="relative w-9 h-9">
-                <img src={logo} alt="WESTLINK" className="w-9 h-9 rounded-full object-cover" />
-                {/* Santa hat overlay */}
+            <Link to="/" className="flex items-center space-x-2">
+              <div className="w-9 h-9">
                 <img
-                  src={santaHat}
-                  alt="Santa Hat"
-                  className="absolute -top-1 -right-1 w-6 h-6 object-contain transform rotate-12"
-                  style={{ pointerEvents: "none" }}
+                  src={logo}
+                  alt="WESTLINK"
+                  className="w-9 h-9 rounded-full object-cover"
                 />
               </div>
 
@@ -48,26 +47,42 @@ export default function Navbar() {
                 <div className="text-base font-bold">WESTLINK</div>
                 <div className="text-xs -mt-1">Supermarket</div>
               </div>
-              <div className="sm:hidden text-base font-bold ml-1">WESTLINK</div>
+              <div className="sm:hidden text-base font-bold ml-1">
+                WESTLINK
+              </div>
             </Link>
           </div>
 
           <div className="hidden md:flex items-center space-x-6">
             {!user && (
               <>
-                <Link to="/login" className="hover:text-yellow-400">Login</Link>
-                <Link to="/register" className="hover:text-yellow-400">Register</Link>
+                <Link to="/login" className="hover:text-yellow-400">
+                  Login
+                </Link>
+                <Link to="/register" className="hover:text-yellow-400">
+                  Register
+                </Link>
               </>
             )}
 
             {user && (
               <>
-                <Link to="/profile" className="hover:text-yellow-400">Profile</Link>
-                <button onClick={handleLogout} className="hover:text-yellow-400">Logout</button>
+                <Link to="/profile" className="hover:text-yellow-400">
+                  Profile
+                </Link>
+                <button
+                  onClick={handleLogout}
+                  className="hover:text-yellow-400"
+                >
+                  Logout
+                </button>
               </>
             )}
 
-            <Link to="/cart" className="relative flex items-center hover:text-yellow-400">
+            <Link
+              to="/cart"
+              className="relative flex items-center hover:text-yellow-400"
+            >
               <ShoppingCart className="w-6 h-6" />
               <span className="ml-1 hidden sm:inline">Cart</span>
               {totalItems > 0 && (
@@ -80,7 +95,10 @@ export default function Navbar() {
 
           {/* MOBILE RIGHT ICONS */}
           <div className="md:hidden flex items-center space-x-3">
-            <Link to="/cart" className="relative flex items-center hover:text-yellow-400">
+            <Link
+              to="/cart"
+              className="relative flex items-center hover:text-yellow-400"
+            >
               <ShoppingCart className="w-6 h-6" />
               {totalItems > 0 && (
                 <span className="absolute -top-2 -right-3 bg-red-600 text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
@@ -94,7 +112,10 @@ export default function Navbar() {
 
       {/* OVERLAY */}
       {menuOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-40 z-40" onClick={() => setMenuOpen(false)} />
+        <div
+          className="fixed inset-0 bg-black bg-opacity-40 z-40"
+          onClick={() => setMenuOpen(false)}
+        />
       )}
 
       {/* SIDEBAR */}
@@ -105,33 +126,88 @@ export default function Navbar() {
       >
         <div className="flex justify-between items-center px-4 py-3 border-b border-gold">
           <h2 className="text-lg font-bold">Menu</h2>
-          <button onClick={() => setMenuOpen(false)} className="text-gold">
+          <button
+            onClick={() => setMenuOpen(false)}
+            className="text-gold"
+          >
             <X size={22} />
           </button>
         </div>
 
         <div className="flex flex-col px-6 py-6 space-y-4">
-          <Link to="/profile" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">👤 Profile</Link>
-          <Link to="/purchases" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">🛍 Purchases</Link>
-          <Link to="/about" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">ℹ️ About</Link>
+          <Link
+            to="/profile"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-yellow-400"
+          >
+            👤 Profile
+          </Link>
+
+          <Link
+            to="/purchases"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-yellow-400"
+          >
+            🛍 Purchases
+          </Link>
+
+          <Link
+            to="/about"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-yellow-400"
+          >
+            ℹ️ About
+          </Link>
 
           {isStaff && (
-            <Link to="/admin" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400 font-bold">🔐 Admin Panel</Link>
+            <Link
+              to="/admin"
+              onClick={() => setMenuOpen(false)}
+              className="hover:text-yellow-400 font-bold"
+            >
+              🔐 Admin Panel
+            </Link>
           )}
 
-          <Link to="/contact-staff" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400 font-semibold">📞 Contact Staff</Link>
+          <Link
+            to="/contact-staff"
+            onClick={() => setMenuOpen(false)}
+            className="hover:text-yellow-400 font-semibold"
+          >
+            📞 Contact Staff
+          </Link>
 
           <div className="pt-4 border-t border-gold"></div>
 
           {!user && (
             <>
-              <Link to="/login" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">Login</Link>
-              <Link to="/register" onClick={() => setMenuOpen(false)} className="hover:text-yellow-400">Register</Link>
+              <Link
+                to="/login"
+                onClick={() => setMenuOpen(false)}
+                className="hover:text-yellow-400"
+              >
+                Login
+              </Link>
+              <Link
+                to="/register"
+                onClick={() => setMenuOpen(false)}
+                className="hover:text-yellow-400"
+              >
+                Register
+              </Link>
             </>
           )}
 
           {user && (
-            <button onClick={() => { handleLogout(); setMenuOpen(false); }} className="text-left hover:text-yellow-400">Logout</button>
+            <button
+              onClick={() => {
+                handleLogout();
+                setMenuOpen(false);
+              }}
+              className="text-left hover:text-yellow-400"
+            >
+              Logout
+            </button>
           )}
         </div>
       </div>
