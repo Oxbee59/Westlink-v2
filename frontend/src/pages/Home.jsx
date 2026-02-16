@@ -43,44 +43,57 @@ export default function Home() {
     [product.image1, product.image2, product.image3].filter(Boolean);
 
   return (
-    <div className="bg-[#111] min-h-screen text-white py-6">
-      <div className="max-w-6xl mx-auto px-4">
-        {/* SIMPLE BANNER */}
-        <div className="bg-gray-900 rounded-lg mb-4 px-4 py-3 text-center shadow">
-          <h1 className="text-lg sm:text-xl font-bold tracking-wide">
+    <div className="bg-gradient-to-b from-[#0f172a] to-[#111] min-h-screen text-white">
+      
+      {/* HERO SECTION */}
+      <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black py-10 shadow-lg">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-wide">
             WESTLINK Supermarket
           </h1>
-          <p className="text-xs sm:text-sm text-gray-300 mt-1">
-            Quality groceries and household essentials you can trust
+          <p className="mt-3 text-sm sm:text-base font-medium">
+            Your trusted supermarket in New Owerri, Imo State
           </p>
         </div>
+      </div>
 
-        {/* CATEGORIES */}
-        <div className="flex flex-wrap justify-center gap-3 mb-6">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
-              className={`px-4 py-2 rounded-full font-semibold transition ${
-                activeCategory === cat
-                  ? "bg-yellow-500 text-black"
-                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+
+        {/* CATEGORY SECTION */}
+        <div className="mb-8">
+          <h2 className="text-xl font-semibold mb-4 text-yellow-400">
+            Shop by Category
+          </h2>
+
+          <div className="flex flex-wrap gap-3">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 shadow ${
+                  activeCategory === cat
+                    ? "bg-yellow-500 text-black scale-105"
+                    : "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* PRODUCT GRID */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
           {filteredProducts.map((product) => (
-            <div
+            <motion.div
               key={product.id}
+              whileHover={{ scale: 1.05 }}
+              transition={{ duration: 0.3 }}
               onClick={() => {
                 setSelectedProduct(product);
                 setActiveImage(0);
               }}
+              className="cursor-pointer"
             >
               <ProductCard
                 id={product.id}
@@ -92,10 +105,10 @@ export default function Home() {
                     : `${API}${product.image1}`
                 }
               />
-              <p className="text-xs text-center text-gray-400 mt-1">
-                Tap to view images
+              <p className="text-xs text-center text-gray-400 mt-2">
+                Click to view details
               </p>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
@@ -110,36 +123,37 @@ export default function Home() {
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
             <div
-              className="absolute inset-0 bg-black/70"
+              className="absolute inset-0 bg-black/70 backdrop-blur-sm"
               onClick={() => setSelectedProduct(null)}
             />
 
             <motion.div
-              initial={{ scale: 0.95 }}
+              initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
-              exit={{ scale: 0.95 }}
-              className="bg-white rounded-2xl max-w-3xl w-full overflow-hidden z-50"
+              exit={{ scale: 0.9 }}
+              className="bg-white rounded-3xl max-w-4xl w-full overflow-hidden z-50 shadow-2xl"
             >
               <div className="grid md:grid-cols-2">
-                {/* IMAGE VIEWER */}
-                <div className="bg-gray-100 p-4">
+
+                {/* IMAGE SECTION */}
+                <div className="bg-gray-100 p-6">
                   <img
                     src={
                       getImages(selectedProduct)[activeImage]?.startsWith("http")
                         ? getImages(selectedProduct)[activeImage]
                         : `${API}${getImages(selectedProduct)[activeImage]}`
                     }
-                    className="w-full h-80 object-contain"
+                    className="w-full h-96 object-contain rounded-lg"
                     alt={selectedProduct.name}
                   />
 
-                  <div className="flex gap-2 justify-center mt-3">
+                  <div className="flex gap-3 justify-center mt-4">
                     {getImages(selectedProduct).map((img, idx) => (
                       <img
                         key={idx}
                         src={img.startsWith("http") ? img : `${API}${img}`}
                         onClick={() => setActiveImage(idx)}
-                        className={`w-14 h-14 object-cover rounded cursor-pointer border ${
+                        className={`w-16 h-16 object-cover rounded-lg cursor-pointer border-2 ${
                           activeImage === idx
                             ? "border-yellow-500"
                             : "border-gray-300"
@@ -150,31 +164,32 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* DETAILS */}
-                <div className="p-6 flex flex-col gap-4">
-                  <h2 className="text-lg sm:text-xl font-bold text-gray-800 leading-snug">
+                {/* DETAILS SECTION */}
+                <div className="p-8 flex flex-col gap-5">
+                  <h2 className="text-2xl font-bold text-gray-800 leading-snug">
                     {selectedProduct.name}
                   </h2>
 
-                  <p className="text-xl font-extrabold text-yellow-600">
+                  <p className="text-2xl font-extrabold text-yellow-600">
                     ₦{Number(selectedProduct.price).toLocaleString()}
                   </p>
 
-                  <div className="flex gap-3 mt-auto">
+                  <div className="flex gap-4 mt-auto">
                     <button
                       onClick={() => addToCart(selectedProduct)}
-                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-2 rounded-lg font-semibold"
+                      className="flex-1 bg-yellow-500 hover:bg-yellow-600 text-black py-3 rounded-xl font-semibold transition"
                     >
                       Add to Cart
                     </button>
                     <button
                       onClick={() => setSelectedProduct(null)}
-                      className="flex-1 border border-gray-300 text-gray-800 py-2 rounded-lg"
+                      className="flex-1 border border-gray-300 text-gray-800 py-3 rounded-xl"
                     >
                       Close
                     </button>
                   </div>
                 </div>
+
               </div>
             </motion.div>
           </motion.div>

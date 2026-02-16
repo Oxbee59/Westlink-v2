@@ -14,32 +14,32 @@ export default function ProductCard({ id, name, price, image }) {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.03, y: -6 }}
+      whileHover={{ scale: 1.04, y: -8 }}
       whileTap={{ scale: 0.98 }}
-      transition={{ type: "spring", stiffness: 220, damping: 20 }}
-      className="relative bg-white rounded-2xl shadow-md overflow-hidden flex flex-col h-full border-2 border-yellow-500"
+      transition={{ type: "spring", stiffness: 250, damping: 18 }}
+      className="relative bg-white rounded-3xl shadow-lg overflow-hidden flex flex-col h-full border border-gray-200 hover:shadow-2xl transition-all duration-300"
     >
       {/* IMAGE */}
-      <div className="relative w-full bg-white rounded-t-2xl flex items-center justify-center p-2 group">
+      <div className="relative w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4 group">
         <img
           src={image || "https://via.placeholder.com/300?text=No+Image"}
           alt={name || "Product"}
-          className="w-full h-40 object-contain"
+          className="w-full h-44 object-contain transition-transform duration-300 group-hover:scale-105"
         />
 
-        {/* VIEW IMAGES BADGE */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center">
-          <span className="opacity-0 group-hover:opacity-100 transition text-xs font-semibold bg-white/90 text-black px-3 py-1 rounded-full">
-            Tap to view images
+        {/* VIEW OVERLAY */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition flex items-center justify-center rounded-t-3xl">
+          <span className="opacity-0 group-hover:opacity-100 transition text-xs font-semibold bg-white text-black px-4 py-1.5 rounded-full shadow">
+            View Details
           </span>
         </div>
       </div>
 
       {/* CONTENT */}
-      <div className="p-3 flex flex-col justify-between flex-1">
-        <div className="mb-2">
+      <div className="p-4 flex flex-col justify-between flex-1">
+        <div>
           <h3
-            className="text-md sm:text-lg font-semibold text-gray-900"
+            className="text-base sm:text-lg font-semibold text-gray-800 leading-snug"
             style={{
               display: "-webkit-box",
               WebkitLineClamp: 2,
@@ -51,7 +51,7 @@ export default function ProductCard({ id, name, price, image }) {
             {name || "Unnamed Product"}
           </h3>
 
-          <p className="text-yellow-600 font-bold mt-2">
+          <p className="text-lg font-extrabold text-yellow-600 mt-3">
             ₦{formatNumber(safePrice)}
           </p>
         </div>
@@ -67,7 +67,7 @@ export default function ProductCard({ id, name, price, image }) {
               image,
             });
           }}
-          className="w-full bg-yellow-500 text-black px-4 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition"
+          className="mt-4 w-full bg-yellow-500 hover:bg-yellow-600 text-black py-2.5 rounded-xl font-semibold transition-all duration-200 shadow-sm hover:shadow-md"
         >
           Add to Cart
         </button>
