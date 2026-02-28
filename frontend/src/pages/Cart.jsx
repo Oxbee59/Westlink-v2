@@ -6,7 +6,7 @@ export default function Cart() {
   const { cartItems, removeFromCart, clearCart } = useCart();
   const navigate = useNavigate();
 
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend-b1zf.onrender.com";
 
   // Safely compute total
   const total = cartItems.reduce((sum, item) => {

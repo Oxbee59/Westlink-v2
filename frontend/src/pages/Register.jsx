@@ -10,7 +10,7 @@ function Register() {
   const [show, setShow] = useState(false);
   const navigate = useNavigate();
 
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend-b1zf.onrender.com";
 
   const handleRegister = async (e) => {
     e.preventDefault();

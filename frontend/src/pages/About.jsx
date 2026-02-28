@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 
 export default function About() {
   const [aboutImages, setAboutImages] = useState([]);
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend-b1zf.onrender.com";
 
   useEffect(() => {
     fetch(`${API}/api/about-images`)

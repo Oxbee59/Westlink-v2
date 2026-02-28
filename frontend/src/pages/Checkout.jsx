@@ -13,7 +13,7 @@ export default function Checkout() {
 
   const total = cartItems.reduce((s, i) => s + Number(i.price) * i.qty, 0);
 
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend-b1zf.onrender.com";
 
   const handleCheckout = async (e) => {
     e.preventDefault();

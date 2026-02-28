@@ -10,7 +10,7 @@ export default function Home() {
   const [activeCategory, setActiveCategory] = useState("All");
   const [activeImage, setActiveImage] = useState(0);
 
-  const API = import.meta.env.VITE_API_URL || "http://localhost:5000";
+  const API = import.meta.env.VITE_API_URL || "https://westlink-backend-b1zf.onrender.com";
 
   useEffect(() => {
     fetch(`${API}/api/products`)
